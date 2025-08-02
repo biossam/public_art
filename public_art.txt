@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>예술가 퀘스트</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- html2canvas 라이브러리 CDN (증서 다운로드 기능용) -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3e8ff;
+            background-image: linear-gradient(135deg, #f3e8ff 0%, #d1c4e9 100%);
+        }
+        .container {
+            max-width: 800px;
+        }
+        .glow {
+            animation: glow 1.5s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #c3a3f5, 0 0 20px #c3a3f5, 0 0 25px #c3a3f5, 0 0 30px #c3a3f5, 0 0 35px #c3a3f5;
+            }
+            to {
+                text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #d8b4fe, 0 0 40px #d8b4fe, 0 0 50px #d8b4fe, 0 0 60px #d8b4fe, 0 0 70px #d8b4fe;
+            }
+        }
+        /* 미션 탭 색상 정의 */
+        .tab-button[data-mission-id="0"] { @apply bg-blue-100 text-blue-600 border-blue-300; }
+        .tab-button[data-mission-id="0"].active { @apply bg-blue-200 text-blue-800 border-blue-500 shadow-lg; }
+        
+        .tab-button[data-mission-id="1"] { @apply bg-yellow-100 text-yellow-600 border-yellow-300; }
+        .tab-button[data-mission-id="1"].active { @apply bg-yellow-200 text-yellow-800 border-yellow-500 shadow-lg; }
+        
+        .tab-button[data-mission-id="2"] { @apply bg-red-100 text-red-600 border-red-300; }
+        .tab-button[data-mission-id="2"].active { @apply bg-red-200 text-red-800 border-red-500 shadow-lg; }
+
+        .tab-button[data-mission-id="3"] { @apply bg-green-100 text-green-600 border-green-300; }
+        .tab-button[data-mission-id="3"].active { @apply bg-green-200 text-green-800 border-green-500 shadow-lg; }
+
+        .tab-button.active {
+            transform: scale(1.05);
+            transition: all 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <!-- 메인 컨테이너 -->
+    <div class="container bg-white bg-opacity-70 backdrop-blur-lg rounded-3xl shadow-2xl p-8 md:p-12 text-center border-4 border-purple-200">
+        <header class="mb-8">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-purple-800 glow">
+                어느 날 눈떠보니 예술가가 되었다
+            </h1>
+            <p class="text-lg text-purple-600 mt-2 font-semibold">
+                새로운 미션을 수행하고 예술가로 거듭나세요!
+            </p>
+        </header>
+
+        <!-- 미션 선택 탭 -->
+        <div id="missionTabs" class="flex flex-wrap justify-center gap-2 mb-8">
+            <button class="tab-button px-4 py-2 rounded-full font-bold text-sm border-2 transition-all duration-300 hover:scale-105 flex items-center relative" data-mission-id="0">
+                <span class="mr-2">동시대미술</span>
+                <span class="badge hidden absolute -top-1 -right-1 w-5 h-5 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs shadow-md">✔️</span>
+            </button>
+            <button class="tab-button px-4 py-2 rounded-full font-bold text-sm border-2 transition-all duration-300 hover:scale-105 flex items-center relative" data-mission-id="1">
+                <span class="mr-2">공공미술</span>
+                <span class="badge hidden absolute -top-1 -right-1 w-5 h-5 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs shadow-md">✔️</span>
+            </button>
+            <button class="tab-button px-4 py-2 rounded-full font-bold text-sm border-2 transition-all duration-300 hover:scale-105 flex items-center relative" data-mission-id="2">
+                <span class="mr-2">사회참여미술</span>
+                <span class="badge hidden absolute -top-1 -right-1 w-5 h-5 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs shadow-md">✔️</span>
+            </button>
+            <button class="tab-button px-4 py-2 rounded-full font-bold text-sm border-2 transition-all duration-300 hover:scale-105 active flex items-center relative" data-mission-id="3">
+                <span class="mr-2">업사이클링 예술</span>
+                <span class="badge hidden absolute -top-1 -right-1 w-5 h-5 bg-purple-500 text-white rounded-full flex items-center justify-center text-xs shadow-md">✔️</span>
+            </button>
+        </div>
+
+        <section class="mb-8 bg-purple-50 rounded-2xl p-6 border-2 border-purple-300">
+            <h2 id="missionTitle" class="text-3xl font-bold text-purple-700 mb-4">
+                미션: 업사이클링 예술가
+            </h2>
+            <p id="missionDescription" class="text-gray-700 leading-relaxed mb-4">
+                버려지는 양말목, 페트병, 헌 옷 등 재활용품을 활용해 지구를 위한 멋진 예술 작품을 만들어보세요. 여러분의 아이디어로 세상에 새로운 가치를 불어넣어 주세요.
+            </p>
+            <div id="missionTags" class="flex justify-center flex-wrap gap-4 text-sm font-medium text-purple-500">
+                <span class="bg-purple-200 px-3 py-1 rounded-full">#기후위기</span>
+                <span class="bg-purple-200 px-3 py-1 rounded-full">#업사이클링</span>
+                <span class="bg-purple-200 px-3 py-1 rounded-full">#재활용</span>
+            </div>
+        </section>
+
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">
+                예술가 이름과 작품 아이디어
+            </h2>
+            <input
+                type="text"
+                id="nameInput"
+                placeholder="예술가 이름을 입력해주세요"
+                class="w-full p-4 mb-4 rounded-xl border-2 border-purple-300 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition duration-300"
+            />
+            <textarea
+                id="userIdeaInput"
+                placeholder="어떤 작품을 만들고 싶나요? 어떤 재료를 사용할 건가요? 작품에 담고 싶은 메시지를 자유롭게 작성해주세요."
+                rows="6"
+                class="w-full p-4 rounded-xl border-2 border-purple-300 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition duration-300 resize-none"
+            ></textarea>
+        </section>
+        
+        <!-- 에러 메시지 박스 -->
+        <div id="errorMessage" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl relative hidden mb-4" role="alert">
+            <span id="errorMessageText" class="block sm:inline"></span>
+        </div>
+
+        <div class="flex justify-center">
+            <button
+                id="completeMissionButton"
+                class="px-8 py-4 bg-purple-600 text-white font-extrabold rounded-full shadow-lg hover:bg-purple-700 transition duration-300 transform hover:scale-105 active:scale-95"
+            >
+                미션 완료하기!
+            </button>
+        </div>
+
+        <!-- 개별 미션 완료 시 결과 섹션 -->
+        <section id="resultSection" class="mt-8 hidden">
+            <div class="bg-green-100 rounded-2xl p-6 border-2 border-green-400">
+                <h2 class="text-3xl font-bold text-green-700 mb-2">
+                    축하합니다!
+                </h2>
+                <p class="text-lg text-gray-800">
+                    <span id="username" class="font-extrabold"></span>님은 이제 진정한 <span id="artistTitle" class="font-extrabold"></span>입니다!
+                </p>
+                <div id="certificateIdea" class="mt-4 bg-white p-4 rounded-xl shadow-inner text-gray-600 italic">
+                    <!-- 사용자의 아이디어가 여기에 표시됩니다 -->
+                </div>
+            </div>
+        </section>
+
+        <!-- 최종 퀘스트 완료 섹션 (모든 미션 완료 시) -->
+        <section id="finalResultSection" class="mt-8 hidden">
+            <div id="finalCertificateContainer" class="bg-indigo-100 rounded-2xl p-6 border-2 border-indigo-400">
+                <h2 class="text-4xl font-extrabold text-indigo-700 mb-4">
+                    🎉 퀘스트 최종 완료! 🎉
+                </h2>
+                <p class="text-xl text-gray-800 font-semibold">
+                    모든 미션을 완수하고 진정한 예술가로 거듭났습니다!
+                </p>
+                <div class="mt-4 text-gray-600">
+                    <p class="text-lg">
+                        <strong>예술가 이름:</strong> <span id="finalUsername" class="font-bold text-indigo-600"></span>
+                    </p>
+                    <div id="finalCertificateMessage" class="mt-4 bg-white p-4 rounded-xl shadow-inner text-gray-700 italic">
+                        <p class="font-semibold text-center">
+                            "예술은 우리 주변의 모든 것이 될 수 있답니다."
+                        </p>
+                    </div>
+                </div>
+                <button id="downloadFinalCertificateButton" class="mt-4 px-6 py-3 bg-indigo-600 text-white font-bold rounded-full shadow-md hover:bg-indigo-700 transition duration-300 transform hover:scale-105 active:scale-95">
+                    최종 증서 다운로드
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM 요소 선택
+            const missionTabs = document.getElementById('missionTabs');
+            const missionTitle = document.getElementById('missionTitle');
+            const missionDescription = document.getElementById('missionDescription');
+            const missionTags = document.getElementById('missionTags');
+            const nameInput = document.getElementById('nameInput');
+            const userIdeaInput = document.getElementById('userIdeaInput');
+            const completeMissionButton = document.getElementById('completeMissionButton');
+            const resultSection = document.getElementById('resultSection');
+            const finalResultSection = document.getElementById('finalResultSection');
+            const usernameSpan = document.getElementById('username');
+            const artistTitleSpan = document.getElementById('artistTitle');
+            const certificateIdeaDiv = document.getElementById('certificateIdea');
+            const errorMessageDiv = document.getElementById('errorMessage');
+            const errorMessageText = document.getElementById('errorMessageText');
+            const finalUsernameSpan = document.getElementById('finalUsername');
+            const finalCertificateContainer = document.getElementById('finalCertificateContainer');
+            const downloadFinalCertificateButton = document.getElementById('downloadFinalCertificateButton');
+
+            // 미션 데이터 정의
+            const missions = [
+                {
+                    title: "미션: 동시대미술",
+                    description: "낯선 것에서 예술 찾기. 세상에 없는 새로운 재료와 아이디어로 예술 작품을 만들어보세요. 예술은 정해진 재료가 없답니다!",
+                    tags: ["#동시대미술", "#새로운시도", "#예술의경계"],
+                    artistTitle: "동시대 미술가",
+                    buttonColor: "bg-blue-100 text-blue-600 border-blue-300"
+                },
+                {
+                    title: "미션: 공공미술",
+                    description: "일상 공간에 예술을 더하기. 사람들이 자주 오가는 장소에 멋진 작품을 설치해 모두에게 예술을 선물해주세요.",
+                    tags: ["#공공미술", "#모두의예술", "#공간변화"],
+                    artistTitle: "공공 미술가",
+                    buttonColor: "bg-yellow-100 text-yellow-600 border-yellow-300"
+                },
+                {
+                    title: "미션: 사회참여미술",
+                    description: "예술로 세상에 메시지 전하기. 사회적 문제를 해결하기 위한 여러분의 생각을 예술 작품에 담아 세상에 큰 울림을 주세요.",
+                    tags: ["#사회참여미술", "#메시지", "#세상에울림"],
+                    artistTitle: "사회 참여 미술가",
+                    buttonColor: "bg-red-100 text-red-600 border-red-300"
+                },
+                {
+                    title: "미션: 업사이클링 예술가",
+                    description: "버려지는 양말목, 페트병, 헌 옷 등 재활용품을 활용해 지구를 위한 멋진 예술 작품을 만들어보세요. 여러분의 아이디어로 세상에 새로운 가치를 불어넣어 주세요.",
+                    tags: ["#기후위기", "#업사이클링", "#재활용"],
+                    artistTitle: "업사이클링 미술가",
+                    buttonColor: "bg-green-100 text-green-600 border-green-300"
+                }
+            ];
+
+            let activeMissionId = 3; // 초기 활성화된 미션 ID
+            
+            // localStorage에서 완료된 미션 상태를 불러오거나 초기화
+            const loadCompletedMissions = () => {
+                const completedMissions = JSON.parse(localStorage.getItem('completedMissions')) || [];
+                return completedMissions.filter(id => id >= 0 && id < missions.length);
+            };
+
+            let completedMissions = loadCompletedMissions();
+
+            // UI를 업데이트하는 함수
+            const updateMissionUI = (missionId) => {
+                const mission = missions[missionId];
+                missionTitle.textContent = mission.title;
+                missionDescription.textContent = mission.description;
+                missionTags.innerHTML = mission.tags.map(tag => `
+                    <span class="bg-purple-200 px-3 py-1 rounded-full">${tag}</span>
+                `).join('');
+
+                const buttons = document.querySelectorAll('.tab-button');
+                buttons.forEach(button => {
+                    const missionIndex = parseInt(button.dataset.missionId);
+                    // 기존 클래스 제거 및 새로운 색상 클래스 추가
+                    button.classList.remove('active', 'bg-blue-100', 'text-blue-600', 'border-blue-300', 'bg-yellow-100', 'text-yellow-600', 'border-yellow-300', 'bg-red-100', 'text-red-600', 'border-red-300', 'bg-green-100', 'text-green-600', 'border-green-300');
+                    button.classList.add(...missions[missionIndex].buttonColor.split(' '));
+
+                    // 완료된 미션에 뱃지 표시
+                    const badge = button.querySelector('.badge');
+                    if (completedMissions.includes(missionIndex)) {
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+
+                    if (missionIndex === missionId) {
+                        button.classList.add('active');
+                    }
+                });
+            };
+
+            // 모든 미션이 완료되었는지 확인하고 최종 결과를 표시하는 함수
+            const checkAllMissionsComplete = () => {
+                if (completedMissions.length === missions.length) {
+                    finalResultSection.classList.remove('hidden');
+                } else {
+                    finalResultSection.classList.add('hidden');
+                }
+            };
+
+            // 초기 UI 설정
+            updateMissionUI(activeMissionId);
+            checkAllMissionsComplete();
+
+            // 탭 버튼 클릭 이벤트 리스너
+            missionTabs.addEventListener('click', (e) => {
+                const button = e.target.closest('.tab-button');
+                if (button) {
+                    activeMissionId = parseInt(button.dataset.missionId);
+                    updateMissionUI(activeMissionId);
+                }
+            });
+
+            // 미션 완료 버튼 클릭 이벤트
+            completeMissionButton.addEventListener('click', () => {
+                const username = nameInput.value.trim();
+                const userIdea = userIdeaInput.value.trim();
+                
+                errorMessageDiv.classList.add('hidden'); // 에러 메시지 초기화
+
+                // 입력 필드 유효성 검사
+                if (!username && !userIdea) {
+                    errorMessageText.textContent = "예술가 이름과 작품 아이디어를 모두 입력해주세요.";
+                    errorMessageDiv.classList.remove('hidden');
+                } else if (!username) {
+                    errorMessageText.textContent = "예술가 이름을 입력해주세요.";
+                    errorMessageDiv.classList.remove('hidden');
+                } else if (!userIdea) {
+                    errorMessageText.textContent = "작품 아이디어를 입력해주세요.";
+                    errorMessageDiv.classList.remove('hidden');
+                } else {
+                    // 미션 완료 처리
+                    const mission = missions[activeMissionId];
+                    
+                    if (!completedMissions.includes(activeMissionId)) {
+                        completedMissions.push(activeMissionId);
+                        localStorage.setItem('completedMissions', JSON.stringify(completedMissions));
+                        updateMissionUI(activeMissionId);
+                    }
+
+                    // 개별 미션 완료 축하 메시지 및 아이디어 표시
+                    usernameSpan.textContent = username;
+                    artistTitleSpan.textContent = mission.artistTitle;
+                    certificateIdeaDiv.innerHTML = `
+                        <p><strong>작품 아이디어:</strong></p>
+                        <p class="mt-2">${userIdea.replace(/\n/g, '<br>')}</p>
+                        <p class="mt-4 text-center text-sm font-semibold">"예술은 우리 주변의 모든 것이 될 수 있답니다."</p>
+                    `;
+                    resultSection.classList.remove('hidden');
+                    
+                    // 모든 미션 완료 시 최종 증서 표시
+                    if (completedMissions.length === missions.length) {
+                        finalUsernameSpan.textContent = username;
+                        checkAllMissionsComplete();
+                    }
+
+                    // 결과 섹션으로 스크롤
+                    resultSection.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+
+            // 최종 증서 다운로드 버튼 클릭 이벤트
+            downloadFinalCertificateButton.addEventListener('click', () => {
+                // 최종 증서 컨테이너만 캡처하여 다운로드
+                html2canvas(finalCertificateContainer, {
+                    scale: 2, // 고해상도 이미지를 위해 스케일 증가
+                    useCORS: true
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = '퀘스트_최종_완료_증서.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                });
+            });
+        });
+    </script>
+</body>
+</html>
