@@ -16,6 +16,13 @@ const MISSIONS = ['동시대 공공미술가', '공공미술가', '사회참여 
 const MAX_TEXT = 500;
 const MAX_IMAGE_BYTES = 1.5 * 1024 * 1024;
 
+// 이름·아이디어에 이런 말이 들어 있으면 저장하지 않음 (필요하면 더 넣으세요)
+const BLOCK_WORDS = ['시발', '씨발', 'ㅅㅂ', 'ㅆㅂ', '병신', 'ㅂㅅ', '개새', '좆', '존나', 'ㅈㄴ', '닥쳐', '꺼져', '미친놈', '미친년', '애미', '느금', '섹스', 'fuck', 'shit'];
+function hasBadWord_(text) {
+  const t = String(text).toLowerCase().replace(/[\s.\-_*~!@#^]/g, '');
+  return BLOCK_WORDS.some((w) => t.indexOf(w) >= 0);
+}
+
 // 시트에서 연 스크립트면 그 시트를, 따로 만든 스크립트면 '예술가 퀘스트 작품' 시트를 만들어 씀
 function book_() {
   const active = SpreadsheetApp.getActiveSpreadsheet();
@@ -33,7 +40,7 @@ function sheet_() {
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) {
     sh = ss.insertSheet(SHEET_NAME);
-    sh.appendRow(['올린 시각', '미션', '예술가 이름', '작품 아이디어', '사진 ID', '공개']);
+    sh.appendRow(['올린 시각', '미션', '예술가 이름', '작품 아이디어', '사진 ID', '공개', '사진 미리보기']);
     sh.setFrozenRows(1);
   }
   return sh;
@@ -78,6 +85,7 @@ function doPost(e) {
     const name = String(d.name || '').trim().slice(0, 30);
     const idea = String(d.idea || '').trim().slice(0, MAX_TEXT);
     if (MISSIONS.indexOf(mission) < 0 || !name || !idea) return json_({ ok: false, error: '빈 칸이 있어요.' });
+    if (hasBadWord_(name) || hasBadWord_(idea)) return json_({ ok: false, error: '고운 말로 다시 써 주세요.' });
 
     let photoId = '';
     if (d.image) {
@@ -96,6 +104,10 @@ function doPost(e) {
     for (let i = 1; i < times.length; i++) { if (times[i][0] === '') { row = i + 1; break; } }
     sh.getRange(row, 1, 1, 6).setValues([[new Date(), mission, name, idea, photoId, !APPROVAL_REQUIRED]]);
     sh.getRange(row, 6).insertCheckboxes();
+    if (photoId) {
+      sh.getRange(row, 7).setFormula('=IMAGE("https://drive.google.com/thumbnail?id=' + photoId + '&sz=w400")');
+      sh.setRowHeight(row, 120);
+    }
     if (!APPROVAL_REQUIRED) sh.getRange(row, 6).setValue(true);
     return json_({ ok: true, approval: APPROVAL_REQUIRED });
   } catch (err) {
