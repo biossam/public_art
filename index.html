@@ -478,6 +478,14 @@
                     });
                     const out = await res.json();
                     if (!out.ok) throw new Error(out.error || '');
+                    // 수업 사이트(같은 주소 biossam.github.io)의 '내 배지'에 이 편 이수를 기록
+                    try {
+                        const ep = order.indexOf(activeMissionId) + 1;   // 1편~4편
+                        const KEY = 'hsa-badges-v1';
+                        const map = JSON.parse(localStorage.getItem(KEY) || '{}') || {};
+                        const k = 'artist/publicart/' + ep;
+                        if (ep > 0 && photoData && !map[k]) { map[k] = new Date().toISOString().slice(0, 10); localStorage.setItem(KEY, JSON.stringify(map)); }
+                    } catch {}
                     shareStatus.className = 'mt-3 text-center text-sm font-semibold text-green-700';
                     shareStatus.textContent = out.approval
                         ? '올렸어요! 선생님이 확인하면 갤러리에 보여요.'
