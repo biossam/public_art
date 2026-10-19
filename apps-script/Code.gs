@@ -35,7 +35,6 @@ function sheet_() {
     sh = ss.insertSheet(SHEET_NAME);
     sh.appendRow(['올린 시각', '미션', '예술가 이름', '작품 아이디어', '사진 ID', '공개']);
     sh.setFrozenRows(1);
-    sh.getRange('F2:F').insertCheckboxes();
   }
   return sh;
 }
@@ -55,7 +54,7 @@ function doGet(e) {
   const rows = sheet_().getDataRange().getValues().slice(1);
   const items = rows
     .map((r, i) => ({ row: i + 2, time: r[0], mission: r[1], name: r[2], idea: r[3], photo: r[4], shown: r[5] === true }))
-    .filter((x) => x.shown && (!mission || x.mission === mission))
+    .filter((x) => x.time && x.shown && (!mission || x.mission === mission))
     .reverse()
     .slice(0, 200)
     .map((x) => ({
@@ -90,7 +89,14 @@ function doPost(e) {
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       photoId = file.getId();
     }
-    sheet_().appendRow([new Date(), mission, name, idea, photoId, !APPROVAL_REQUIRED]);
+    // A열(올린 시각)이 빈 첫 줄에 씀 (공개 칸 체크박스만 있는 줄은 빈 줄로 봄)
+    const sh = sheet_();
+    const times = sh.getRange('A:A').getValues();
+    let row = times.length + 1;
+    for (let i = 1; i < times.length; i++) { if (times[i][0] === '') { row = i + 1; break; } }
+    sh.getRange(row, 1, 1, 6).setValues([[new Date(), mission, name, idea, photoId, !APPROVAL_REQUIRED]]);
+    sh.getRange(row, 6).insertCheckboxes();
+    if (!APPROVAL_REQUIRED) sh.getRange(row, 6).setValue(true);
     return json_({ ok: true, approval: APPROVAL_REQUIRED });
   } catch (err) {
     return json_({ ok: false, error: '저장하지 못했어요. 잠시 뒤 다시 해 주세요.' });
