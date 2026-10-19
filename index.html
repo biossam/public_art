@@ -198,8 +198,58 @@
             <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
             <div class="flex justify-center mt-4">
                 <button id="galleryRefresh" class="px-4 py-2 text-sm font-bold text-purple-700 border-2 border-purple-300 rounded-full hover:bg-purple-100">새로고침</button>
+                <button id="exhibitOpen" class="ml-2 px-4 py-2 text-sm font-bold text-white bg-amber-600 rounded-full hover:bg-amber-700">🖼️ 우리 반 전시회 만들기</button>
+            </div>
+
+            <!-- 전시회 만들기: 작품을 골라 전시장처럼 한 점씩 보여 줌 (고른 작품은 이 기기에 기억) -->
+            <div id="exhibitBuilder" class="hidden mt-6 bg-amber-50 rounded-2xl p-6 border-2 border-amber-300">
+                <h3 class="text-2xl font-bold text-amber-800 mb-2 text-center">우리 반 전시회 만들기</h3>
+                <p class="text-sm text-gray-600 text-center mb-4">전시할 작품을 눌러 고르고 <b>전시 시작</b>을 누르세요. 화면을 크게 띄워 함께 감상할 수 있어요.</p>
+                <input id="exhibitTitle" maxlength="40" placeholder="전시회 이름 (예: 6학년 3반 공공미술 전시회)" class="w-full p-3 mb-3 rounded-xl border-2 border-amber-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                <div class="flex flex-wrap gap-2 justify-center mb-3">
+                    <button id="exhibitAll" type="button" class="px-3 py-1 text-sm font-bold border-2 border-amber-300 rounded-full text-amber-800">모두 고르기</button>
+                    <button id="exhibitNone" type="button" class="px-3 py-1 text-sm font-bold border-2 border-amber-300 rounded-full text-amber-800">모두 빼기</button>
+                    <span id="exhibitCount" class="px-3 py-1 text-sm font-bold text-amber-800"></span>
+                </div>
+                <div id="exhibitPick" class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-96 overflow-y-auto p-1"></div>
+                <div class="flex justify-center mt-4">
+                    <button id="exhibitStart" type="button" class="px-8 py-3 bg-amber-600 text-white font-extrabold rounded-full shadow-md hover:bg-amber-700 disabled:opacity-50">전시 시작</button>
+                </div>
             </div>
         </section>
+
+        <!-- 전시장 화면 -->
+        <div id="exhibitStage" class="hidden fixed inset-0 z-50 flex flex-col" style="background:#efe4cf" role="dialog" aria-modal="true" aria-label="우리 반 전시회">
+            <div class="flex items-center justify-between px-6 py-3">
+                <p id="exhibitHead" class="text-xl md:text-3xl font-extrabold text-amber-900"></p>
+                <button id="exhibitClose" type="button" aria-label="전시 닫기" class="w-12 h-12 rounded-full bg-white/70 text-2xl font-bold text-amber-900">×</button>
+            </div>
+            <div class="flex-1 flex items-center justify-center gap-4 px-4 min-h-0">
+                <button id="exhibitPrev" type="button" aria-label="이전 작품" class="shrink-0 w-12 h-12 rounded-full bg-white/70 text-2xl font-bold text-amber-900">‹</button>
+                <figure id="exhibitFrame" class="relative flex flex-col items-center min-w-0 max-h-full transition-opacity duration-500">
+                    <div class="flex gap-10 mb-2" aria-hidden="true">
+                        <span class="block w-10 h-5 rounded-b-full bg-gray-400 shadow-[0_18px_40px_14px_rgba(255,244,200,0.9)]"></span>
+                        <span class="block w-10 h-5 rounded-b-full bg-gray-400 shadow-[0_18px_40px_14px_rgba(255,244,200,0.9)]"></span>
+                        <span class="block w-10 h-5 rounded-b-full bg-gray-400 shadow-[0_18px_40px_14px_rgba(255,244,200,0.9)]"></span>
+                    </div>
+                    <div class="p-3 md:p-5 rounded-sm shadow-2xl" style="background:linear-gradient(135deg,#8a5a2b,#b07a40 45%,#7a4a20)">
+                        <div class="bg-white p-3 md:p-6">
+                            <img id="exhibitImg" alt="" class="block max-h-[56vh] max-w-[70vw] object-contain">
+                            <p id="exhibitNoImg" class="hidden w-[60vw] max-w-xl min-h-[30vh] flex items-center justify-center text-center text-2xl text-gray-700 whitespace-pre-line"></p>
+                        </div>
+                    </div>
+                    <figcaption class="mt-4 bg-white/80 rounded-xl px-5 py-3 text-center max-w-[80vw]">
+                        <p id="exhibitName" class="text-lg md:text-2xl font-extrabold text-gray-800"></p>
+                        <p id="exhibitIdea" class="text-sm md:text-lg text-gray-700 mt-1 line-clamp-3"></p>
+                    </figcaption>
+                </figure>
+                <button id="exhibitNext" type="button" aria-label="다음 작품" class="shrink-0 w-12 h-12 rounded-full bg-white/70 text-2xl font-bold text-amber-900">›</button>
+            </div>
+            <div class="flex items-center justify-center gap-4 py-3">
+                <span id="exhibitPos" class="font-bold text-amber-900"></span>
+                <button id="exhibitPlay" type="button" class="px-4 py-2 rounded-full bg-white/70 font-bold text-amber-900">⏸ 멈춤</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -448,6 +498,92 @@
             });
             document.getElementById('galleryRefresh').addEventListener('click', () => loadGallery(galleryMission));
 
+            /* ---------- 우리 반 전시회 ---------- */
+            let lastItems = [];
+            let exhibitItems = [];
+            const EX_KEY = 'exhibitPicked';
+            let picked = new Set();
+            try { picked = new Set(JSON.parse(localStorage.getItem(EX_KEY) || '[]')); } catch {}
+            const savePicked = () => { try { localStorage.setItem(EX_KEY, JSON.stringify([...picked])); } catch {} };
+            const exTitle = document.getElementById('exhibitTitle');
+            try { exTitle.value = localStorage.getItem('exhibitTitle') || ''; } catch {}
+            exTitle.addEventListener('input', () => { try { localStorage.setItem('exhibitTitle', exTitle.value); } catch {} });
+            const exPick = document.getElementById('exhibitPick');
+            const exCount = () => { document.getElementById('exhibitCount').textContent = `고른 작품 ${exhibitItems.filter((x) => picked.has(x.id)).length}점`; };
+            const paintPick = () => {
+                exPick.innerHTML = exhibitItems.length ? exhibitItems.map((x) => {
+                    const on = picked.has(x.id);
+                    return `<button type="button" data-pick="${Number(x.id)}" aria-pressed="${on}" class="text-left rounded-xl p-2 border-4 ${on ? 'border-amber-500 bg-white' : 'border-transparent bg-white/60 opacity-70'}">
+                        ${x.image ? `<img src="${esc(x.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" class="w-full h-24 object-contain bg-purple-50 rounded-lg">` : `<div class="w-full h-24 flex items-center justify-center text-xs text-gray-500 bg-purple-50 rounded-lg">사진 없음</div>`}
+                        <p class="mt-1 text-xs font-bold text-gray-800 truncate">${on ? '✔ ' : ''}${esc(x.name)}</p>
+                        <p class="text-[11px] text-purple-500 truncate">${esc(x.mission)}</p></button>`;
+                }).join('') : '<p class="col-span-full text-center text-gray-500">아직 올라온 작품이 없어요.</p>';
+                exCount();
+            };
+            exPick.addEventListener('click', (e) => {
+                const b = e.target.closest('[data-pick]'); if (!b) return;
+                const id = Number(b.dataset.pick);
+                picked.has(id) ? picked.delete(id) : picked.add(id);
+                savePicked(); paintPick();
+            });
+            document.getElementById('exhibitAll').addEventListener('click', () => { exhibitItems.forEach((x) => picked.add(x.id)); savePicked(); paintPick(); });
+            document.getElementById('exhibitNone').addEventListener('click', () => { exhibitItems.forEach((x) => picked.delete(x.id)); savePicked(); paintPick(); });
+            document.getElementById('exhibitOpen').addEventListener('click', async () => {
+                const box = document.getElementById('exhibitBuilder');
+                box.classList.toggle('hidden');
+                if (box.classList.contains('hidden')) return;
+                exPick.innerHTML = '<p class="col-span-full text-center text-gray-500">작품을 불러오는 중…</p>';
+                try {
+                    const res = await fetch(GALLERY_URL);
+                    exhibitItems = ((await res.json()).items || []).map((x) => ({ ...x, id: Number(x.id) }));
+                } catch { exhibitItems = lastItems; }
+                paintPick();
+                box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+
+            const stage = document.getElementById('exhibitStage');
+            let show = [], at = 0, timer = null, playing = true;
+            const paintShow = () => {
+                const x = show[at]; const frame = document.getElementById('exhibitFrame');
+                frame.style.opacity = 0;
+                setTimeout(() => {
+                    const img = document.getElementById('exhibitImg'), noImg = document.getElementById('exhibitNoImg');
+                    if (x.image) { img.src = x.image; img.alt = `${x.name}의 작품`; img.classList.remove('hidden'); noImg.classList.add('hidden'); }
+                    else { img.classList.add('hidden'); noImg.textContent = x.idea; noImg.classList.remove('hidden'); noImg.style.display = 'flex'; }
+                    document.getElementById('exhibitName').textContent = `작가: ${x.name} · ${x.mission}`;
+                    document.getElementById('exhibitIdea').textContent = x.idea;
+                    document.getElementById('exhibitPos').textContent = `${at + 1} / ${show.length}`;
+                    frame.style.opacity = 1;
+                }, 250);
+            };
+            const go = (d) => { at = (at + d + show.length) % show.length; paintShow(); };
+            const setPlay = (on) => {
+                playing = on; clearInterval(timer);
+                if (on) timer = setInterval(() => go(1), 7000);
+                document.getElementById('exhibitPlay').textContent = on ? '⏸ 멈춤' : '▶ 자동 넘기기';
+            };
+            const closeShow = () => {
+                stage.classList.add('hidden'); clearInterval(timer); document.removeEventListener('keydown', onKey);
+                if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+            };
+            const onKey = (e) => {
+                if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); go(1); setPlay(playing); }
+                else if (e.key === 'ArrowLeft') { go(-1); setPlay(playing); }
+                else if (e.key === 'Escape') closeShow();
+            };
+            document.getElementById('exhibitStart').addEventListener('click', () => {
+                show = exhibitItems.filter((x) => picked.has(x.id));
+                if (!show.length) { alert('전시할 작품을 먼저 골라 주세요.'); return; }
+                document.getElementById('exhibitHead').textContent = exTitle.value.trim() || '우리 반 전시회';
+                at = 0; stage.classList.remove('hidden'); paintShow(); setPlay(true);
+                document.addEventListener('keydown', onKey);
+                stage.requestFullscreen?.().catch(() => {});
+            });
+            document.getElementById('exhibitClose').addEventListener('click', closeShow);
+            document.getElementById('exhibitPrev').addEventListener('click', () => { go(-1); setPlay(playing); });
+            document.getElementById('exhibitNext').addEventListener('click', () => { go(1); setPlay(playing); });
+            document.getElementById('exhibitPlay').addEventListener('click', () => setPlay(!playing));
+
             async function loadGallery(mission) {
                 galleryMission = mission || '';
                 galleryTabs.querySelectorAll('.g-tab').forEach((b) => {
@@ -463,6 +599,7 @@
                     const res = await fetch(GALLERY_URL + (qs.toString() ? '?' + qs : ''));
                     const out = await res.json();
                     const items = out.items || [];
+                    lastItems = items;
                     galleryNote.textContent = items.length ? `작품 ${items.length}개` : '아직 올라온 작품이 없어요. 첫 작품을 올려 보세요!';
                     galleryGrid.innerHTML = items.map((x) => `
                         <article class="bg-white rounded-2xl shadow p-4 border-2 border-purple-100">
