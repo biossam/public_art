@@ -16,8 +16,20 @@ const MISSIONS = ['동시대 공공미술가', '공공미술가', '사회참여 
 const MAX_TEXT = 500;
 const MAX_IMAGE_BYTES = 1.5 * 1024 * 1024;
 
+// 시트에서 연 스크립트면 그 시트를, 따로 만든 스크립트면 '예술가 퀘스트 작품' 시트를 만들어 씀
+function book_() {
+  const active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) return active;
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('SHEET_ID');
+  if (id) { try { return SpreadsheetApp.openById(id); } catch (e) { /* 지워졌으면 새로 만듦 */ } }
+  const ss = SpreadsheetApp.create('예술가 퀘스트 작품');
+  props.setProperty('SHEET_ID', ss.getId());
+  return ss;
+}
+
 function sheet_() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = book_();
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) {
     sh = ss.insertSheet(SHEET_NAME);
