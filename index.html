@@ -198,7 +198,7 @@
             <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
             <div class="flex justify-center mt-4">
                 <button id="galleryRefresh" class="px-4 py-2 text-sm font-bold text-purple-700 border-2 border-purple-300 rounded-full hover:bg-purple-100">새로고침</button>
-                <button id="exhibitOpen" class="ml-2 px-4 py-2 text-sm font-bold text-white bg-amber-600 rounded-full hover:bg-amber-700">🖼️ 우리 반 전시회 만들기</button>
+                <button id="exhibitOpen" class="hidden ml-2 px-4 py-2 text-sm font-bold text-white bg-amber-600 rounded-full hover:bg-amber-700">🖼️ 우리 반 전시회 만들기</button>
             </div>
 
             <!-- 전시회 만들기: 작품을 골라 전시장처럼 한 점씩 보여 줌 (고른 작품은 이 기기에 기억) -->
@@ -498,7 +498,9 @@
             });
             document.getElementById('galleryRefresh').addEventListener('click', () => loadGallery(galleryMission));
 
-            /* ---------- 우리 반 전시회 ---------- */
+            /* ---------- 우리 반 전시회 (선생님용: 주소에 ?teacher=1 이 있을 때만 보임) ---------- */
+            const isTeacher = new URLSearchParams(location.search).has('teacher');
+            if (isTeacher) document.getElementById('exhibitOpen').classList.remove('hidden');
             let lastItems = [];
             let exhibitItems = [];
             const EX_KEY = 'exhibitPicked';
