@@ -149,6 +149,21 @@
                     <!-- 사용자의 아이디어가 여기에 표시됩니다 -->
                 </div>
             </div>
+
+            <!-- 친구들과 작품 나누기: 작품 사진과 아이디어를 갤러리에 올림 -->
+            <div id="shareBox" class="mt-6 bg-white rounded-2xl p-6 border-2 border-purple-300 text-left">
+                <h3 class="text-2xl font-bold text-purple-700 mb-2 text-center">친구들과 작품 나누기</h3>
+                <p class="text-gray-600 text-sm mb-4 text-center">내 작품 사진을 올리면 친구들도 갤러리에서 볼 수 있어요. <b>얼굴은 나오지 않게 작품만</b> 찍어 주세요.</p>
+                <label class="block">
+                    <span class="font-semibold text-gray-700">작품 사진 (선택)</span>
+                    <input id="photoInput" type="file" accept="image/*" class="mt-2 block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-purple-100 file:text-purple-700 file:font-bold">
+                </label>
+                <img id="photoPreview" alt="올릴 작품 사진 미리보기" class="hidden mt-3 max-h-64 mx-auto rounded-xl shadow">
+                <div class="flex justify-center mt-4">
+                    <button id="shareButton" class="px-6 py-3 bg-purple-600 text-white font-bold rounded-full shadow-md hover:bg-purple-700 transition duration-300 disabled:opacity-50">갤러리에 올리기</button>
+                </div>
+                <p id="shareStatus" class="mt-3 text-center text-sm font-semibold" aria-live="polite"></p>
+            </div>
         </section>
 
         <!-- 모든 미션 완료 시 나타나는 최종 퀘스트 완료 섹션 -->
@@ -173,6 +188,16 @@
                 <button id="downloadFinalCertificateButton" class="mt-4 px-6 py-3 bg-indigo-600 text-white font-bold rounded-full shadow-md hover:bg-indigo-700 transition duration-300 transform hover:scale-105 active:scale-95">
                     최종 증서 다운로드
                 </button>
+            </div>
+        </section>
+        <!-- 친구 작품 갤러리 -->
+        <section id="gallery" class="mt-12 text-left">
+            <h2 class="text-3xl font-extrabold text-purple-800 text-center mb-2">친구 작품 갤러리</h2>
+            <p id="galleryNote" class="text-center text-gray-600 mb-4"></p>
+            <div id="galleryTabs" class="flex flex-wrap justify-center gap-2 mb-6"></div>
+            <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+            <div class="flex justify-center mt-4">
+                <button id="galleryRefresh" class="px-4 py-2 text-sm font-bold text-purple-700 border-2 border-purple-300 rounded-full hover:bg-purple-100">새로고침</button>
             </div>
         </section>
     </div>
@@ -332,10 +357,11 @@
                     artistTitleSpan.textContent = mission.artistTitle;
                     certificateIdeaDiv.innerHTML = `
                         <p><strong>작품 아이디어:</strong></p>
-                        <p class="mt-2">${userIdea.replace(/\n/g, '<br>')}</p>
+                        <p class="mt-2">${esc(userIdea).replace(/\n/g, '<br>')}</p>
                         <p class="mt-4 text-center text-sm font-semibold">"예술은 우리 주변의 모든 것이 될 수 있답니다."</p>
                     `;
                     resultSection.classList.remove('hidden');
+                    shareButton.disabled = false; shareStatus.textContent = '';
                     
                     // 모든 미션 완료 상태를 다시 확인하고 최종 증서를 표시합니다.
                     checkAllMissionsComplete();
@@ -344,6 +370,115 @@
                     resultSection.scrollIntoView({ behavior: 'smooth' });
                 }
             });
+
+            /* ---------- 작품 나누기 · 갤러리 ----------
+               GALLERY_URL: 선생님이 배포한 Apps Script 웹 앱 주소 (apps-script/설치방법.md 참고).
+               비어 있으면 갤러리는 '준비 중'으로 보입니다. */
+            const GALLERY_URL = '';
+            const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            const photoInput = document.getElementById('photoInput');
+            const photoPreview = document.getElementById('photoPreview');
+            const shareButton = document.getElementById('shareButton');
+            const shareStatus = document.getElementById('shareStatus');
+            const galleryTabs = document.getElementById('galleryTabs');
+            const galleryGrid = document.getElementById('galleryGrid');
+            const galleryNote = document.getElementById('galleryNote');
+            let photoData = '';
+            let galleryMission = '';
+
+            // 사진을 1280px 이하 JPEG로 줄여서 올림
+            const shrink = (file) => new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const k = Math.min(1, 1280 / Math.max(img.width, img.height));
+                    const c = document.createElement('canvas');
+                    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+                    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                    URL.revokeObjectURL(img.src);
+                    resolve(c.toDataURL('image/jpeg', 0.82));
+                };
+                img.onerror = reject;
+                img.src = URL.createObjectURL(file);
+            });
+            photoInput.addEventListener('change', async () => {
+                photoData = '';
+                photoPreview.classList.add('hidden');
+                const f = photoInput.files[0];
+                if (!f) return;
+                try {
+                    photoData = await shrink(f);
+                    photoPreview.src = photoData;
+                    photoPreview.classList.remove('hidden');
+                } catch { shareStatus.textContent = '사진을 열 수 없어요. 다른 사진을 골라 주세요.'; }
+            });
+
+            shareButton.addEventListener('click', async () => {
+                if (!GALLERY_URL) { shareStatus.textContent = '선생님이 갤러리를 준비하고 있어요.'; return; }
+                const name = nameInput.value.trim();
+                const idea = userIdeaInput.value.trim();
+                if (!name || !idea) { shareStatus.textContent = '예술가 이름과 작품 아이디어를 먼저 써 주세요.'; return; }
+                shareButton.disabled = true;
+                shareStatus.className = 'mt-3 text-center text-sm font-semibold text-purple-700';
+                shareStatus.textContent = '올리는 중이에요…';
+                try {
+                    const res = await fetch(GALLERY_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ mission: missions[activeMissionId].artistTitle, name, idea, image: photoData }),
+                    });
+                    const out = await res.json();
+                    if (!out.ok) throw new Error(out.error || '');
+                    shareStatus.className = 'mt-3 text-center text-sm font-semibold text-green-700';
+                    shareStatus.textContent = out.approval
+                        ? '올렸어요! 선생님이 확인하면 갤러리에 보여요.'
+                        : '올렸어요! 아래 갤러리에서 볼 수 있어요.';
+                    loadGallery(missions[activeMissionId].artistTitle);
+                } catch (err) {
+                    shareStatus.className = 'mt-3 text-center text-sm font-semibold text-red-600';
+                    shareStatus.textContent = err.message || '올리지 못했어요. 잠시 뒤 다시 해 주세요.';
+                    shareButton.disabled = false;
+                }
+            });
+
+            const order = [1, 0, 2, 3]; // 1편~4편 순서
+            galleryTabs.innerHTML = ['전체', ...order.map((i) => missions[i].artistTitle)].map((t) =>
+                `<button type="button" data-g="${t === '전체' ? '' : esc(t)}" class="g-tab px-3 py-1 rounded-full text-sm font-bold border-2 border-purple-300 text-purple-700">${esc(t)}</button>`).join('');
+            galleryTabs.addEventListener('click', (e) => {
+                const b = e.target.closest('.g-tab'); if (b) loadGallery(b.dataset.g);
+            });
+            document.getElementById('galleryRefresh').addEventListener('click', () => loadGallery(galleryMission));
+
+            async function loadGallery(mission) {
+                galleryMission = mission || '';
+                galleryTabs.querySelectorAll('.g-tab').forEach((b) => {
+                    const on = b.dataset.g === galleryMission;
+                    b.classList.toggle('bg-purple-600', on); b.classList.toggle('text-white', on);
+                    b.classList.toggle('text-purple-700', !on);
+                });
+                if (!GALLERY_URL) { galleryNote.textContent = '선생님이 갤러리를 준비하고 있어요.'; galleryGrid.innerHTML = ''; return; }
+                galleryNote.textContent = '불러오는 중…';
+                try {
+                    const res = await fetch(GALLERY_URL + (galleryMission ? '?mission=' + encodeURIComponent(galleryMission) : ''));
+                    const out = await res.json();
+                    const items = out.items || [];
+                    galleryNote.textContent = items.length ? `작품 ${items.length}개` : '아직 올라온 작품이 없어요. 첫 작품을 올려 보세요!';
+                    galleryGrid.innerHTML = items.map((x) => `
+                        <article class="bg-white rounded-2xl shadow p-4 border-2 border-purple-100">
+                            ${x.image ? `<img src="${esc(x.image)}" alt="${esc(x.name)}의 작품" loading="lazy" referrerpolicy="no-referrer" class="w-full aspect-[4/3] object-cover rounded-xl mb-3 bg-purple-50">` : ''}
+                            <p class="text-xs font-bold text-purple-500">${esc(x.mission)} · ${esc(x.time)}</p>
+                            <h3 class="text-lg font-extrabold text-gray-800">${esc(x.name)}</h3>
+                            <p class="text-gray-700 mt-1 whitespace-pre-line">${esc(x.idea)}</p>
+                        </article>`).join('');
+                } catch {
+                    galleryNote.textContent = '갤러리를 불러오지 못했어요. 새로고침을 눌러 주세요.';
+                }
+            }
+
+            // 주소로 미션 고르기: ?m=1~4 (1편~4편), #gallery 면 갤러리로 이동
+            const qm = Number(new URLSearchParams(location.search).get('m'));
+            if (qm >= 1 && qm <= 4) { activeMissionId = order[qm - 1]; updateMissionUI(activeMissionId); }
+            loadGallery(qm >= 1 && qm <= 4 ? missions[activeMissionId].artistTitle : '');
+            if (location.hash === '#gallery') setTimeout(() => document.getElementById('gallery').scrollIntoView(), 300);
 
             // "최종 증서 다운로드" 버튼 클릭 이벤트 리스너
             downloadFinalCertificateButton.addEventListener('click', () => {
