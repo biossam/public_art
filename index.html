@@ -193,6 +193,12 @@
         <!-- 친구 작품 갤러리 -->
         <section id="gallery" class="mt-12 text-left">
             <h2 class="text-3xl font-extrabold text-purple-800 text-center mb-2">친구 작품 갤러리</h2>
+            <div class="flex flex-wrap items-center justify-center gap-2 mb-3">
+                <label for="classInput" class="font-bold text-gray-700">학급 코드</label>
+                <input id="classInput" maxlength="20" placeholder="선생님이 알려 준 코드" class="w-48 p-2 rounded-xl border-2 border-purple-300 bg-white text-center uppercase focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <button id="classApply" type="button" class="px-4 py-2 text-sm font-bold text-white bg-purple-600 rounded-full hover:bg-purple-700">적용</button>
+            </div>
+            <p id="classNote" class="text-center text-sm text-gray-500 mb-2"></p>
             <p id="galleryNote" class="text-center text-gray-600 mb-4"></p>
             <div id="galleryTabs" class="flex flex-wrap justify-center gap-2 mb-6"></div>
             <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
@@ -385,6 +391,25 @@
             const galleryNote = document.getElementById('galleryNote');
             let photoData = '';
             let galleryMission = '';
+            // 학급 코드: 주소의 ?class= 가 먼저, 없으면 이 기기에 저장된 코드. 같은 코드끼리만 작품을 봄
+            const normClass = (v) => String(v || '').trim().toUpperCase().replace(/[^0-9A-Z가-힣_-]/g, '').slice(0, 20);
+            const classInput = document.getElementById('classInput');
+            const classNote = document.getElementById('classNote');
+            let classCode = normClass(new URLSearchParams(location.search).get('class'));
+            try { if (!classCode) classCode = normClass(localStorage.getItem('galleryClass')); } catch {}
+            const showClass = () => {
+                classInput.value = classCode;
+                classNote.textContent = classCode
+                    ? `'${classCode}' 반 친구들 작품만 보여요. 올리는 작품도 이 반 갤러리에 들어가요.`
+                    : '학급 코드를 넣으면 우리 반 친구들 작품만 모아 볼 수 있어요.';
+            };
+            showClass();
+            document.getElementById('classApply').addEventListener('click', () => {
+                classCode = normClass(classInput.value);
+                try { localStorage.setItem('galleryClass', classCode); } catch {}
+                showClass(); loadGallery(galleryMission);
+            });
+            classInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('classApply').click(); });
 
             // 사진을 1280px 이하 JPEG로 줄여서 올림
             const shrink = (file) => new Promise((resolve, reject) => {
@@ -424,7 +449,7 @@
                     const res = await fetch(GALLERY_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ mission: missions[activeMissionId].artistTitle, name, idea, image: photoData }),
+                        body: JSON.stringify({ mission: missions[activeMissionId].artistTitle, name, idea, image: photoData, class: classCode }),
                     });
                     const out = await res.json();
                     if (!out.ok) throw new Error(out.error || '');
@@ -447,18 +472,27 @@
                 const b = e.target.closest('.g-tab'); if (b) loadGallery(b.dataset.g);
             });
             document.getElementById('galleryRefresh').addEventListener('click', () => loadGallery(galleryMission));
-            // 신고하면 그 작품은 바로 숨겨짐 (선생님이 시트에서 다시 공개할 수 있음)
+            // 좋아요: 이 기기에서 작품마다 한 번만 누를 수 있음
+            let liked = new Set();
+            try { liked = new Set(JSON.parse(localStorage.getItem('galleryLiked') || '[]')); } catch {}
+            const saveLiked = () => { try { localStorage.setItem('galleryLiked', JSON.stringify([...liked])); } catch {} };
             galleryGrid.addEventListener('click', async (e) => {
-                const b = e.target.closest('[data-report]'); if (!b) return;
-                if (!confirm('이 작품을 신고할까요? 신고하면 바로 숨겨지고 선생님이 확인해요.')) return;
-                b.disabled = true; b.textContent = '신고하는 중…';
+                const b = e.target.closest('[data-like]'); if (!b) return;
+                const id = Number(b.dataset.like);
+                if (liked.has(id) || b.disabled) return;
+                b.disabled = true;
+                const n = b.querySelector('.like-n');
+                n.textContent = Number(n.textContent) + 1;
+                b.querySelector('[aria-hidden]').textContent = '♥';
+                b.className = 'like-btn inline-flex items-center gap-1 px-3 py-1 rounded-full border-2 text-sm font-bold bg-pink-100 border-pink-400 text-pink-600';
+                b.setAttribute('aria-pressed', 'true');
+                liked.add(id); saveLiked();
                 try {
                     const res = await fetch(GALLERY_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ action: 'report', id: Number(b.dataset.report) }) });
+                        body: JSON.stringify({ action: 'like', id }) });
                     const out = await res.json();
-                    if (!out.ok) throw new Error();
-                    b.closest('article').remove();
-                } catch { b.disabled = false; b.textContent = '신고하지 못했어요. 다시 눌러 주세요.'; }
+                    if (out.ok && out.likes) n.textContent = out.likes;
+                } catch { /* 숫자는 다음 새로고침 때 맞춰짐 */ }
             });
 
             async function loadGallery(mission) {
@@ -471,7 +505,10 @@
                 if (!GALLERY_URL) { galleryNote.textContent = '선생님이 갤러리를 준비하고 있어요.'; galleryGrid.innerHTML = ''; return; }
                 galleryNote.textContent = '불러오는 중…';
                 try {
-                    const res = await fetch(GALLERY_URL + (galleryMission ? '?mission=' + encodeURIComponent(galleryMission) : ''));
+                    const qs = new URLSearchParams();
+                    if (galleryMission) qs.set('mission', galleryMission);
+                    if (classCode) qs.set('class', classCode);
+                    const res = await fetch(GALLERY_URL + (qs.toString() ? '?' + qs : ''));
                     const out = await res.json();
                     const items = out.items || [];
                     galleryNote.textContent = items.length ? `작품 ${items.length}개` : '아직 올라온 작품이 없어요. 첫 작품을 올려 보세요!';
@@ -481,7 +518,7 @@
                             <p class="text-xs font-bold text-purple-500">${esc(x.mission)} · ${esc(x.time)}</p>
                             <h3 class="text-lg font-extrabold text-gray-800">${esc(x.name)}</h3>
                             <p class="text-gray-700 mt-1 whitespace-pre-line">${esc(x.idea)}</p>
-                            <div class="text-right mt-2"><button type="button" data-report="${Number(x.id)}" class="text-xs text-gray-400 underline hover:text-red-600">이상한 작품 신고</button></div>
+                            <div class="mt-3"><button type="button" data-like="${Number(x.id)}" aria-pressed="${liked.has(Number(x.id))}" class="like-btn inline-flex items-center gap-1 px-3 py-1 rounded-full border-2 text-sm font-bold ${liked.has(Number(x.id)) ? 'bg-pink-100 border-pink-400 text-pink-600' : 'border-purple-200 text-purple-600 hover:bg-purple-50'}"><span aria-hidden="true">${liked.has(Number(x.id)) ? '♥' : '♡'}</span> 좋아요 <span class="like-n">${Number(x.likes) || 0}</span></button></div>
                         </article>`).join('');
                 } catch {
                     galleryNote.textContent = '갤러리를 불러오지 못했어요. 새로고침을 눌러 주세요.';

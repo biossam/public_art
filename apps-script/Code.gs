@@ -41,9 +41,13 @@ function sheet_() {
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) {
     sh = ss.insertSheet(SHEET_NAME);
-    sh.appendRow(['올린 시각', '미션', '예술가 이름', '작품 아이디어', '사진 ID', '공개', '사진 미리보기', '신고']);
+    sh.appendRow(['올린 시각', '미션', '예술가 이름', '작품 아이디어', '사진 ID', '공개', '사진 미리보기', '신고', '학급 코드', '좋아요']);
     sh.setFrozenRows(1);
   }
+  // 예전에 만든 시트에도 새 칸 제목을 채움
+  const heads = ['사진 미리보기', '신고', '학급 코드', '좋아요'];
+  const cur = sh.getRange(1, 7, 1, 4).getValues()[0];
+  if (cur.join('|') !== heads.join('|')) sh.getRange(1, 7, 1, 4).setValues([heads]);
   return sh;
 }
 
@@ -57,12 +61,16 @@ function json_(obj) {
 }
 
 // 갤러리 목록: 공개된 작품만, 최근 것부터
+// 학급 코드: 영문·숫자·한글 20자까지, 대문자로 맞춤
+function cls_(v) { return String(v || '').trim().toUpperCase().replace(/[^0-9A-Z가-힣_-]/g, '').slice(0, 20); }
+
 function doGet(e) {
   const mission = e && e.parameter && e.parameter.mission;
+  const cls = cls_(e && e.parameter && e.parameter.class);
   const rows = sheet_().getDataRange().getValues().slice(1);
   const items = rows
-    .map((r, i) => ({ row: i + 2, time: r[0], mission: r[1], name: r[2], idea: r[3], photo: r[4], shown: r[5] === true }))
-    .filter((x) => x.time && x.shown && (!mission || x.mission === mission))
+    .map((r, i) => ({ row: i + 2, time: r[0], mission: r[1], name: r[2], idea: r[3], photo: r[4], shown: r[5] === true, cls: cls_(r[8]), likes: Number(r[9]) || 0 }))
+    .filter((x) => x.time && x.shown && x.cls === cls && (!mission || x.mission === mission))
     .reverse()
     .slice(0, 200)
     .map((x) => ({
@@ -72,6 +80,7 @@ function doGet(e) {
       idea: x.idea,
       image: x.photo ? 'https://drive.google.com/thumbnail?id=' + x.photo + '&sz=w800' : '',
       time: Utilities.formatDate(new Date(x.time), 'Asia/Seoul', 'M월 d일'),
+      likes: x.likes,
     }));
   return json_({ ok: true, items: items, approval: APPROVAL_REQUIRED });
 }
@@ -85,6 +94,16 @@ function report_(row) {
   return json_({ ok: true });
 }
 
+// 좋아요: 숫자 하나 올림 (같은 기기에서 한 번만 누르도록 사이트가 막음)
+function like_(row) {
+  const sh = sheet_();
+  if (!(row >= 2 && row <= sh.getLastRow()) || sh.getRange(row, 6).getValue() !== true) return json_({ ok: false });
+  const c = sh.getRange(row, 10);
+  const n = (Number(c.getValue()) || 0) + 1;
+  c.setValue(n);
+  return json_({ ok: true, likes: n });
+}
+
 // 작품 올리기
 function doPost(e) {
   const lock = LockService.getScriptLock();
@@ -92,6 +111,7 @@ function doPost(e) {
   try {
     const d = JSON.parse(e.postData.contents);
     if (d.action === 'report') return report_(Number(d.id));
+    if (d.action === 'like') return like_(Number(d.id));
     const mission = String(d.mission || '');
     const name = String(d.name || '').trim().slice(0, 30);
     const idea = String(d.idea || '').trim().slice(0, MAX_TEXT);
@@ -114,9 +134,10 @@ function doPost(e) {
     let row = times.length + 1;
     for (let i = 1; i < times.length; i++) { if (times[i][0] === '') { row = i + 1; break; } }
     sh.getRange(row, 1, 1, 6).setValues([[new Date(), mission, name, idea, photoId, !APPROVAL_REQUIRED]]);
+    sh.getRange(row, 9, 1, 2).setValues([[cls_(d.class), 0]]);
     sh.getRange(row, 6).insertCheckboxes();
     if (photoId) {
-      sh.getRange(row, 7).setFormula('=IMAGE("https://drive.google.com/thumbnail?id=' + photoId + '&sz=w400")');
+      sh.getRange(row, 7).setFormula('=IMAGE("https://lh3.googleusercontent.com/d/' + photoId + '=w400")');
       sh.setRowHeight(row, 120);
     }
     if (!APPROVAL_REQUIRED) sh.getRange(row, 6).setValue(true);
