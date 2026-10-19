@@ -447,6 +447,19 @@
                 const b = e.target.closest('.g-tab'); if (b) loadGallery(b.dataset.g);
             });
             document.getElementById('galleryRefresh').addEventListener('click', () => loadGallery(galleryMission));
+            // 신고하면 그 작품은 바로 숨겨짐 (선생님이 시트에서 다시 공개할 수 있음)
+            galleryGrid.addEventListener('click', async (e) => {
+                const b = e.target.closest('[data-report]'); if (!b) return;
+                if (!confirm('이 작품을 신고할까요? 신고하면 바로 숨겨지고 선생님이 확인해요.')) return;
+                b.disabled = true; b.textContent = '신고하는 중…';
+                try {
+                    const res = await fetch(GALLERY_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'report', id: Number(b.dataset.report) }) });
+                    const out = await res.json();
+                    if (!out.ok) throw new Error();
+                    b.closest('article').remove();
+                } catch { b.disabled = false; b.textContent = '신고하지 못했어요. 다시 눌러 주세요.'; }
+            });
 
             async function loadGallery(mission) {
                 galleryMission = mission || '';
@@ -468,6 +481,7 @@
                             <p class="text-xs font-bold text-purple-500">${esc(x.mission)} · ${esc(x.time)}</p>
                             <h3 class="text-lg font-extrabold text-gray-800">${esc(x.name)}</h3>
                             <p class="text-gray-700 mt-1 whitespace-pre-line">${esc(x.idea)}</p>
+                            <div class="text-right mt-2"><button type="button" data-report="${Number(x.id)}" class="text-xs text-gray-400 underline hover:text-red-600">이상한 작품 신고</button></div>
                         </article>`).join('');
                 } catch {
                     galleryNote.textContent = '갤러리를 불러오지 못했어요. 새로고침을 눌러 주세요.';

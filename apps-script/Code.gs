@@ -8,7 +8,8 @@
 
 // true: 선생님이 시트에서 '공개'를 체크해야 갤러리에 보임 (권장)
 // false: 올리자마자 바로 보임 (선생님은 '공개' 체크를 풀어서 숨길 수 있음)
-const APPROVAL_REQUIRED = true;
+const APPROVAL_REQUIRED = false;
+// 신고가 들어온 작품은 바로 숨김 ('공개' 체크가 풀리고 '신고' 칸에 표시됨)
 
 const SHEET_NAME = '작품';
 const FOLDER_NAME = '예술가 퀘스트 작품 사진';
@@ -40,7 +41,7 @@ function sheet_() {
   let sh = ss.getSheetByName(SHEET_NAME);
   if (!sh) {
     sh = ss.insertSheet(SHEET_NAME);
-    sh.appendRow(['올린 시각', '미션', '예술가 이름', '작품 아이디어', '사진 ID', '공개', '사진 미리보기']);
+    sh.appendRow(['올린 시각', '미션', '예술가 이름', '작품 아이디어', '사진 ID', '공개', '사진 미리보기', '신고']);
     sh.setFrozenRows(1);
   }
   return sh;
@@ -75,12 +76,22 @@ function doGet(e) {
   return json_({ ok: true, items: items, approval: APPROVAL_REQUIRED });
 }
 
+// 신고: 해당 작품을 바로 숨기고 신고 시각을 남김
+function report_(row) {
+  const sh = sheet_();
+  if (!(row >= 2 && row <= sh.getLastRow())) return json_({ ok: false, error: '작품을 찾지 못했어요.' });
+  sh.getRange(row, 6).setValue(false);
+  sh.getRange(row, 8).setValue('신고됨 ' + Utilities.formatDate(new Date(), 'Asia/Seoul', 'M/d HH:mm'));
+  return json_({ ok: true });
+}
+
 // 작품 올리기
 function doPost(e) {
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
     const d = JSON.parse(e.postData.contents);
+    if (d.action === 'report') return report_(Number(d.id));
     const mission = String(d.mission || '');
     const name = String(d.name || '').trim().slice(0, 30);
     const idea = String(d.idea || '').trim().slice(0, MAX_TEXT);
