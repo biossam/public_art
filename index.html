@@ -229,7 +229,7 @@
         </section>
 
         <!-- 전시장 화면 -->
-        <div id="exhibitStage" class="hidden fixed inset-0 z-50 flex flex-col" style="background:#efe4cf" role="dialog" aria-modal="true" aria-label="우리 반 전시회">
+        <div id="exhibitStage" class="hidden fixed inset-0 z-50 flex flex-col" style="background:radial-gradient(ellipse 55% 60% at 50% 42%, #fffaf0 0%, #f3e8d2 45%, #dccbaa 100%)" role="dialog" aria-modal="true" aria-label="우리 반 전시회">
             <div class="flex items-center justify-between px-6 py-3">
                 <p id="exhibitHead" class="text-xl md:text-3xl font-extrabold text-amber-900"></p>
                 <button id="exhibitClose" type="button" aria-label="전시 닫기" class="w-12 h-12 rounded-full bg-white/70 text-2xl font-bold text-amber-900">×</button>
@@ -237,11 +237,6 @@
             <div class="flex-1 flex items-center justify-center gap-4 px-4 min-h-0">
                 <button id="exhibitPrev" type="button" aria-label="이전 작품" class="shrink-0 w-12 h-12 rounded-full bg-white/70 text-2xl font-bold text-amber-900">‹</button>
                 <figure id="exhibitFrame" class="relative flex flex-col items-center min-w-0 max-h-full transition-opacity duration-500">
-                    <div class="flex gap-10 mb-2" aria-hidden="true">
-                        <span class="block w-10 h-5 rounded-b-full bg-gray-400 shadow-[0_18px_40px_14px_rgba(255,244,200,0.9)]"></span>
-                        <span class="block w-10 h-5 rounded-b-full bg-gray-400 shadow-[0_18px_40px_14px_rgba(255,244,200,0.9)]"></span>
-                        <span class="block w-10 h-5 rounded-b-full bg-gray-400 shadow-[0_18px_40px_14px_rgba(255,244,200,0.9)]"></span>
-                    </div>
                     <div class="p-3 md:p-5 rounded-sm shadow-2xl" style="background:linear-gradient(135deg,#8a5a2b,#b07a40 45%,#7a4a20)">
                         <div class="bg-white p-3 md:p-6">
                             <img id="exhibitImg" alt="" class="block max-h-[56vh] max-w-[70vw] object-contain">
