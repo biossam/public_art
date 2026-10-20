@@ -11,9 +11,22 @@
 const APPROVAL_REQUIRED = false;
 // 신고가 들어온 작품은 바로 숨김 ('공개' 체크가 풀리고 '신고' 칸에 표시됨)
 
-// 선생님 코드: 비워 두면 선생님 화면에서 바로 베스트를 저장할 수 있음.
-// 학생이 함부로 바꾸지 못하게 하려면 원하는 글자를 넣고, 선생님 화면에서 처음 저장할 때 같은 코드를 입력하세요.
-const TEACHER_KEY = '';
+// 선생님 코드: 이 파일(공개 저장소)에 적지 말고 '프로젝트 설정 → 스크립트 속성'에 TEACHER_KEY 로 넣으세요.
+// 비어 있으면 선생님 화면에서 바로 베스트를 저장할 수 있음. 넣으면 선생님 화면에서 처음 저장할 때 같은 코드를 입력.
+const TEACHER_KEY = PropertiesService.getScriptProperties().getProperty('TEACHER_KEY') || '';
+
+// 장난으로 한꺼번에 많이 올리는 것을 막음: 10분 동안 전체 올리기 횟수 제한
+const MAX_POSTS_PER_10MIN = 300;
+function tooMany_() {
+  const c = CacheService.getScriptCache();
+  const k = 'posts_' + Math.floor(Date.now() / 600000);
+  const n = Number(c.get(k) || 0) + 1;
+  c.put(k, String(n), 700);
+  return n > MAX_POSTS_PER_10MIN;
+}
+
+// 시트에 글을 넣을 때 = + - @ 로 시작하면 수식으로 실행되지 않게 앞에 ' 를 붙임
+function safe_(v) { const t = String(v == null ? '' : v); return /^[=+\-@\t\r]/.test(t) ? "'" + t : t; }
 
 const SHEET_NAME = '작품';
 const FOLDER_NAME = '예술가 퀘스트 작품 사진';
@@ -149,6 +162,7 @@ function doPost(e) {
     if (d.action === 'report') return report_(Number(d.id));
     if (d.action === 'like') return like_(Number(d.id));
     if (d.action === 'best') return best_(d);
+    if (tooMany_()) return json_({ ok: false, error: '지금 올리는 사람이 많아요. 잠시 뒤 다시 해 주세요.' });
     const mission = String(d.mission || '');
     const name = String(d.name || '').trim().slice(0, 30);
     const idea = String(d.idea || '').trim().slice(0, MAX_TEXT);
@@ -171,7 +185,7 @@ function doPost(e) {
         if (rows[i][0] && rows[i][1] === mission && String(rows[i][2]) === name && !rows[i][3]) target = i + 2;
       }
       if (target) {
-        sh.getRange(target, 4).setValue(idea);
+        sh.getRange(target, 4).setValue(safe_(idea));
         return json_({ ok: true, id: target, photo: true, approval: APPROVAL_REQUIRED });
       }
     }
@@ -202,7 +216,7 @@ function doPost(e) {
     const times = sh.getRange('A:A').getValues();
     let row = times.length + 1;
     for (let i = 1; i < times.length; i++) { if (times[i][0] === '') { row = i + 1; break; } }
-    sh.getRange(row, 1, 1, 6).setValues([[new Date(), mission, name, idea, photoId, !APPROVAL_REQUIRED]]);
+    sh.getRange(row, 1, 1, 6).setValues([[new Date(), mission, safe_(name), safe_(idea), photoId, !APPROVAL_REQUIRED]]);
     sh.getRange(row, 9, 1, 2).setValues([[cls_(d.class), 0]]);
     sh.getRange(row, 6).insertCheckboxes();
     sh.getRange(row, 11).insertCheckboxes();   // 베스트: 선생님이 체크하면 학생 갤러리에 보임
