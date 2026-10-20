@@ -445,6 +445,10 @@
             const galleryNote = document.getElementById('galleryNote');
             let photoData = '';
             let galleryMission = '';
+            // 드라이브 썸네일 크기 줄이기 (목록은 작은 그림, 전시장만 큰 그림)
+            const thumb = (u, w) => String(u || '').replace(/sz=w\d+/, 'sz=w' + w);
+            const PAGE = 12;   // 갤러리는 12개씩 보여 주고 '더 보기'
+            let galleryShown = PAGE;
 
             // 사진을 1280px 이하 JPEG로 줄여서 올림
             const shrink = (file) => new Promise((resolve, reject) => {
@@ -551,6 +555,10 @@
                 });
                 const sub = document.querySelector('header p'); if (sub) sub.textContent = '선생님용: 우리 반 작품을 모아 보고 전시회를 열어요.';
                 document.getElementById('gallery').classList.remove('mt-12');
+                // 선생님 화면은 갤러리 목록을 불러오지 않고 전시회 만들기만 바로 엶 (탭·날짜로 거름)
+                ['galleryGrid', 'galleryNote', 'galleryRefresh', 'exhibitOpen'].forEach((id) => { document.getElementById(id).style.display = 'none'; });
+                document.querySelector('#gallery h2').textContent = '우리 반 작품 모아 보기';
+                setTimeout(() => document.getElementById('exhibitOpen').click(), 0);
             }
             let lastItems = [];
             let exhibitItems = [];
@@ -581,7 +589,7 @@
                 exPick.innerHTML = list.length ? list.map((x) => {
                     const on = picked.has(x.id);
                     return `<button type="button" data-pick="${Number(x.id)}" aria-pressed="${on}" class="text-left rounded-xl p-2 border-4 ${on ? 'border-amber-500 bg-white' : 'border-transparent bg-white/60 opacity-70'}">
-                        ${x.image ? `<img src="${esc(x.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" class="w-full h-24 object-contain bg-purple-50 rounded-lg">` : `<div class="w-full h-24 flex items-center justify-center text-xs text-gray-500 bg-purple-50 rounded-lg">사진 없음</div>`}
+                        ${x.image ? `<img src="${esc(thumb(x.image, 240))}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" class="w-full h-24 object-contain bg-purple-50 rounded-lg">` : `<div class="w-full h-24 flex items-center justify-center text-xs text-gray-500 bg-purple-50 rounded-lg">사진 없음</div>`}
                         <p class="mt-1 text-xs font-bold text-gray-800 truncate">${on ? '✔ ' : ''}${esc(x.name)}</p>
                         <p class="text-[11px] text-purple-500 truncate">${esc(x.mission)}</p></button>`;
                 }).join('') : `<p class="col-span-full text-center text-gray-500">${exDate.value ? '이 날짜에 올라온 작품이 없어요.' : '아직 올라온 작품이 없어요.'}</p>`;
@@ -658,6 +666,7 @@
                     b.classList.toggle('bg-purple-600', on); b.classList.toggle('text-white', on);
                     b.classList.toggle('text-purple-700', !on);
                 });
+                if (isTeacher) return;   // 선생님 화면은 탭만 바꾸고 목록은 전시회 만들기에서 봄
                 if (!GALLERY_URL) { galleryNote.textContent = '선생님이 갤러리를 준비하고 있어요.'; galleryGrid.innerHTML = ''; return; }
                 galleryNote.textContent = '불러오는 중…';
                 try {
@@ -668,15 +677,23 @@
                     const items = out.items || [];
                     lastItems = items;
                     galleryNote.textContent = items.length ? `작품 ${items.length}개` : '아직 올라온 작품이 없어요. 첫 작품을 올려 보세요!';
-                    galleryGrid.innerHTML = items.map((x) => `
+                    galleryShown = PAGE; paintGallery();
+                } catch {
+                    galleryNote.textContent = '갤러리를 불러오지 못했어요. 새로고침을 눌러 주세요.';
+                }
+            }
+            function paintGallery() {
+                const items = lastItems;
+                {
+                    galleryGrid.innerHTML = items.slice(0, galleryShown).map((x) => `
                         <article class="bg-white rounded-2xl shadow p-4 border-2 border-purple-100">
-                            ${x.image ? `<img src="${esc(x.image)}" alt="${esc(x.name)}의 작품" loading="lazy" referrerpolicy="no-referrer" class="w-full max-h-96 object-contain rounded-xl mb-3 bg-purple-50">` : ''}
+                            ${x.image ? `<img src="${esc(thumb(x.image, 480))}" alt="${esc(x.name)}의 작품" loading="lazy" decoding="async" referrerpolicy="no-referrer" class="w-full max-h-96 object-contain rounded-xl mb-3 bg-purple-50">` : ''}
                             <p class="text-xs font-bold text-purple-500">${esc(x.mission)} · ${esc(x.time)}</p>
                             <h3 class="text-lg font-extrabold text-gray-800">${esc(x.name)}</h3>
                             <p class="text-gray-700 mt-1 whitespace-pre-line">${esc(x.idea)}</p>
-                        </article>`).join('');
-                } catch {
-                    galleryNote.textContent = '갤러리를 불러오지 못했어요. 새로고침을 눌러 주세요.';
+                        </article>`).join('')
+                        + (items.length > galleryShown ? `<div class="col-span-full flex justify-center"><button type="button" id="galleryMore" class="px-5 py-2 font-bold text-purple-700 border-2 border-purple-300 rounded-full hover:bg-purple-100">더 보기 (${items.length - galleryShown}개 남음)</button></div>` : '');
+                    document.getElementById('galleryMore')?.addEventListener('click', () => { galleryShown += PAGE; paintGallery(); });
                 }
             }
 
