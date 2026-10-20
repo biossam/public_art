@@ -146,7 +146,7 @@ function doPost(e) {
       const want = Number(d.id);
       if (want >= 2 && want <= last) {
         const r = rows[want - 2];
-        if (r[1] === mission && String(r[2]) === name && !r[3]) target = want;
+        if (r[1] === mission && String(r[2]) === name) target = want;   // 자기 줄이면 이야기를 고쳐 씀
       }
       for (let i = rows.length - 1; !target && i >= 0; i--) {
         if (rows[i][0] && rows[i][1] === mission && String(rows[i][2]) === name && !rows[i][3]) target = i + 2;
@@ -166,6 +166,18 @@ function doPost(e) {
       const file = folder_(mission).createFile(Utilities.newBlob(bytes, m[1], mission + '_' + name + '.jpg'));
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       photoId = file.getId();
+    }
+    // 사진 다시 올리기: 같은 기기에서 올린 자기 줄(id·미션·이름이 같음)이면 사진만 바꿈
+    if (photoOnly && photoId && Number(d.id) >= 2 && Number(d.id) <= sh.getLastRow()) {
+      const want = Number(d.id);
+      const r = sh.getRange(want, 1, 1, 5).getValues()[0];
+      if (r[1] === mission && String(r[2]) === name) {
+        if (r[4]) { try { DriveApp.getFileById(r[4]).setTrashed(true); } catch (err) { /* 예전 사진이 없으면 그냥 둠 */ } }
+        sh.getRange(want, 5).setValue(photoId);
+        sh.getRange(want, 7).setFormula('=IMAGE("https://lh3.googleusercontent.com/d/' + photoId + '=w400")');
+        sh.setRowHeight(want, 120);
+        return json_({ ok: true, id: want, photo: true, replaced: true, approval: APPROVAL_REQUIRED });
+      }
     }
     // A열(올린 시각)이 빈 첫 줄에 씀 (공개 칸 체크박스만 있는 줄은 빈 줄로 봄)
     const times = sh.getRange('A:A').getValues();

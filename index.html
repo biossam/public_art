@@ -503,9 +503,11 @@
                 if (!photoData) { say(shareStatus, '작품 사진을 골라 주세요.', 'bad'); return; }
                 shareButton.disabled = true; say(shareStatus, '올리는 중이에요…');
                 try {
-                    const out = await post({ action: 'photo', mission: missions[activeMissionId].artistTitle, name, image: photoData });
+                    const prev = readPhoto();
+                    const out = await post({ action: 'photo', mission: missions[activeMissionId].artistTitle, name, image: photoData, id: prev && prev.name === name ? prev.id : '' });
                     try { localStorage.setItem(photoKey(), JSON.stringify({ id: out.id, name })); localStorage.setItem('artistName', name); } catch {}
-                    say(shareStatus, '올렸어요! 아래 갤러리에서 볼 수 있어요. 작품 이야기는 수업 마무리 때 써요.', 'ok');
+                    say(shareStatus, out.replaced ? '사진을 바꿨어요! 아래 갤러리에서 확인해 보세요.' : '올렸어요! 아래 갤러리에서 볼 수 있어요. 작품 이야기는 수업 마무리 때 써요.', 'ok');
+                    shareButton.disabled = false; shareButton.textContent = '사진 바꾸기';
                     loadGallery(missions[activeMissionId].artistTitle);
                 } catch (err) {
                     say(shareStatus, err.message || '올리지 못했어요. 잠시 뒤 다시 해 주세요.', 'bad');
@@ -521,7 +523,8 @@
                 try {
                     const prev = readPhoto();
                     const out = await post({ mission: missions[activeMissionId].artistTitle, name, idea, id: prev && prev.name === name ? prev.id : '' });
-                    if (out.photo) { markBadge(); say(status, '작품 이야기까지 보냈어요! 내 배지에 이 편 배지가 생겼어요.', 'ok'); }
+                    try { const pv = readPhoto(); if (out.id) localStorage.setItem(photoKey(), JSON.stringify({ ...(pv || {}), id: out.id, name })); } catch {}
+                    if (out.photo) { markBadge(); say(status, '작품 이야기까지 보냈어요! 내 배지에 이 편 배지가 생겼어요. 고치고 싶으면 다시 쓰고 미션 완료하기를 누르세요.', 'ok'); }
                     else say(status, '작품 이야기를 보냈어요. 교실 속 미술 이야기에서 같은 이름으로 작품 사진도 올리면 배지를 받아요.', 'ok');
                     loadGallery(missions[activeMissionId].artistTitle);
                 } catch (err) {
@@ -682,6 +685,11 @@
             if (qm >= 1 && qm <= 4) { activeMissionId = order[qm - 1]; updateMissionUI(activeMissionId); }
             const photoStep = new URLSearchParams(location.search).get('step') === 'photo';
             document.getElementById('uploadSection').classList.toggle('hidden', !photoStep);
+            // 이 기기에서 이미 올린 사진이 있으면 '사진 바꾸기'로 안내 (같은 이름으로 다시 올리면 바뀜)
+            if (photoStep && readPhoto()) {
+                shareButton.textContent = '사진 바꾸기';
+                say(shareStatus, '이미 사진을 올렸어요. 바꾸고 싶으면 새 사진을 골라 같은 이름으로 다시 올리세요.');
+            }
             document.getElementById('ideaSection').classList.toggle('hidden', photoStep);
             try {
                 const nm = localStorage.getItem('artistName') || '';
