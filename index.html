@@ -539,7 +539,15 @@
 
             /* ---------- 우리 반 전시회 (선생님용: 주소에 ?teacher=1 이 있을 때만 보임) ---------- */
             const isTeacher = new URLSearchParams(location.search).has('teacher');
-            if (isTeacher) document.getElementById('exhibitOpen').classList.remove('hidden');
+            if (isTeacher) {
+                document.getElementById('exhibitOpen').classList.remove('hidden');
+                // 선생님 화면: 미션 입력 부분은 숨기고 갤러리와 전시회 만들기만 보여 줌
+                ['missionTabs', 'missionInputSection', 'resultSection', 'finalResultSection'].forEach((id) => {
+                    const el = document.getElementById(id); if (el) el.style.display = 'none';
+                });
+                const sub = document.querySelector('header p'); if (sub) sub.textContent = '선생님용: 우리 반 작품을 모아 보고 전시회를 열어요.';
+                document.getElementById('gallery').classList.remove('mt-12');
+            }
             let lastItems = [];
             let exhibitItems = [];
             const EX_KEY = 'exhibitPicked';
