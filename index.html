@@ -222,6 +222,11 @@
                     <span id="exhibitCount" class="px-3 py-1 text-sm font-bold text-amber-800"></span>
                 </div>
                 <div id="exhibitPick" class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-96 overflow-y-auto p-1"></div>
+                <div class="mt-4 bg-white/70 rounded-xl p-3 text-center">
+                    <p class="text-sm text-gray-700">⭐를 누르면 <b>학생 갤러리 베스트</b>로 정해져요 (미술가별 5개까지).</p>
+                    <button id="bestSave" type="button" class="mt-2 px-5 py-2 text-sm font-bold text-white bg-yellow-500 rounded-full hover:bg-yellow-600">⭐ 베스트 저장하기</button>
+                    <p id="bestStatus" class="mt-1 text-sm font-semibold text-amber-800" aria-live="polite"></p>
+                </div>
                 <div class="flex justify-center mt-4">
                     <button id="exhibitStart" type="button" class="px-8 py-3 bg-amber-600 text-white font-extrabold rounded-full shadow-md hover:bg-amber-700 disabled:opacity-50">전시 시작</button>
                 </div>
@@ -588,14 +593,29 @@
                 const list = shown();
                 exPick.innerHTML = list.length ? list.map((x) => {
                     const on = picked.has(x.id);
-                    return `<button type="button" data-pick="${Number(x.id)}" aria-pressed="${on}" class="text-left rounded-xl p-2 border-4 ${on ? 'border-amber-500 bg-white' : 'border-transparent bg-white/60 opacity-70'}">
+                    const star = bestSet.has(x.id);
+                    return `<div class="relative"><button type="button" data-best="${Number(x.id)}" aria-pressed="${star}" title="학생 갤러리 베스트로 정하기" class="absolute top-1 right-1 z-10 w-8 h-8 rounded-full text-lg leading-8 shadow ${star ? 'bg-yellow-300' : 'bg-white/90 grayscale opacity-70'}">⭐</button><button type="button" data-pick="${Number(x.id)}" aria-pressed="${on}" class="w-full text-left rounded-xl p-2 border-4 ${on ? 'border-amber-500 bg-white' : 'border-transparent bg-white/60 opacity-70'}">
                         ${x.image ? `<img src="${esc(thumb(x.image, 240))}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" class="w-full h-24 object-contain bg-purple-50 rounded-lg">` : `<div class="w-full h-24 flex items-center justify-center text-xs text-gray-500 bg-purple-50 rounded-lg">사진 없음</div>`}
                         <p class="mt-1 text-xs font-bold text-gray-800 truncate">${on ? '✔ ' : ''}${esc(x.name)}</p>
-                        <p class="text-[11px] text-purple-500 truncate">${esc(x.mission)}</p></button>`;
+                        <p class="text-[11px] text-purple-500 truncate">${esc(x.mission)}</p></button></div>`;
                 }).join('') : `<p class="col-span-full text-center text-gray-500">${exDate.value ? '이 날짜에 올라온 작품이 없어요.' : '아직 올라온 작품이 없어요.'}</p>`;
                 exCount();
             };
+            // 베스트: 선생님이 고른 작품이 학생 갤러리에 보임 (미술가별 5개까지)
+            let bestSet = new Set();
             exPick.addEventListener('click', (e) => {
+                const st = e.target.closest('[data-best]');
+                if (st) {
+                    const id = Number(st.dataset.best);
+                    if (bestSet.has(id)) bestSet.delete(id);
+                    else {
+                        const m = (exhibitItems.find((x) => x.id === id) || {}).mission;
+                        if (exhibitItems.filter((x) => x.mission === m && bestSet.has(x.id)).length >= 5) { alert(`'${m}' 베스트는 5개까지 고를 수 있어요.`); return; }
+                        bestSet.add(id);
+                    }
+                    document.getElementById('bestStatus').textContent = '바꾼 내용을 저장하려면 ⭐ 베스트 저장하기를 누르세요.';
+                    paintPick(); return;
+                }
                 const b = e.target.closest('[data-pick]'); if (!b) return;
                 const id = Number(b.dataset.pick);
                 picked.has(id) ? picked.delete(id) : picked.add(id);
@@ -611,9 +631,28 @@
                 try {
                     const res = await fetch(GALLERY_URL);
                     exhibitItems = ((await res.json()).items || []).map((x) => ({ ...x, id: Number(x.id) }));
+                    bestSet = new Set(exhibitItems.filter((x) => x.best).map((x) => x.id));
                 } catch { exhibitItems = lastItems; }
                 paintPick();
                 box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+
+            document.getElementById('bestSave').addEventListener('click', async () => {
+                const st = document.getElementById('bestStatus');
+                st.textContent = '저장하는 중…';
+                try {
+                    let key = ''; try { key = localStorage.getItem('teacherKey') || ''; } catch {}
+                    let res = await fetch(GALLERY_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'best', ids: [...bestSet], key }) });
+                    let out = await res.json();
+                    if (out.needKey) {
+                        key = prompt('선생님 코드를 입력하세요 (Apps Script의 TEACHER_KEY)') || '';
+                        try { localStorage.setItem('teacherKey', key); } catch {}
+                        res = await fetch(GALLERY_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'best', ids: [...bestSet], key }) });
+                        out = await res.json();
+                    }
+                    if (!out.ok) throw new Error(out.error || '');
+                    st.textContent = `저장했어요! 학생 갤러리에 베스트 ${bestSet.size}개가 보여요.`;
+                } catch (err) { st.textContent = err.message || '저장하지 못했어요. 다시 눌러 주세요.'; }
             });
 
             const stage = document.getElementById('exhibitStage');

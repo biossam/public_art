@@ -11,6 +11,10 @@
 const APPROVAL_REQUIRED = false;
 // 신고가 들어온 작품은 바로 숨김 ('공개' 체크가 풀리고 '신고' 칸에 표시됨)
 
+// 선생님 코드: 비워 두면 선생님 화면에서 바로 베스트를 저장할 수 있음.
+// 학생이 함부로 바꾸지 못하게 하려면 원하는 글자를 넣고, 선생님 화면에서 처음 저장할 때 같은 코드를 입력하세요.
+const TEACHER_KEY = '';
+
 const SHEET_NAME = '작품';
 const FOLDER_NAME = '예술가 퀘스트 작품 사진';
 const MISSIONS = ['동시대 공공미술가', '공공미술가', '사회참여 공공미술가', '재사용 공공미술가'];
@@ -123,6 +127,19 @@ function like_(row) {
   return json_({ ok: true, likes: n });
 }
 
+// 베스트 저장: 고른 작품만 '베스트' 체크, 나머지는 해제
+function best_(d) {
+  if (TEACHER_KEY && String(d.key || '') !== TEACHER_KEY) return json_({ ok: false, needKey: true, error: '선생님 코드가 맞지 않아요.' });
+  const sh = sheet_();
+  const last = sh.getLastRow();
+  if (last < 2) return json_({ ok: true });
+  const ids = new Set((d.ids || []).map(Number));
+  const vals = [];
+  for (let r = 2; r <= last; r++) vals.push([ids.has(r)]);
+  sh.getRange(2, 11, last - 1, 1).insertCheckboxes().setValues(vals);
+  return json_({ ok: true });
+}
+
 // 작품 올리기
 function doPost(e) {
   const lock = LockService.getScriptLock();
@@ -131,6 +148,7 @@ function doPost(e) {
     const d = JSON.parse(e.postData.contents);
     if (d.action === 'report') return report_(Number(d.id));
     if (d.action === 'like') return like_(Number(d.id));
+    if (d.action === 'best') return best_(d);
     const mission = String(d.mission || '');
     const name = String(d.name || '').trim().slice(0, 30);
     const idea = String(d.idea || '').trim().slice(0, MAX_TEXT);
