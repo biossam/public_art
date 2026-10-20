@@ -45,9 +45,9 @@ function sheet_() {
     sh.setFrozenRows(1);
   }
   // 예전에 만든 시트에도 새 칸 제목을 채움
-  const heads = ['사진 미리보기', '신고', '학급 코드', '좋아요'];
-  const cur = sh.getRange(1, 7, 1, 4).getValues()[0];
-  if (cur.join('|') !== heads.join('|')) sh.getRange(1, 7, 1, 4).setValues([heads]);
+  const heads = ['사진 미리보기', '신고', '학급 코드', '좋아요', '베스트'];
+  const cur = sh.getRange(1, 7, 1, 5).getValues()[0];
+  if (cur.join('|') !== heads.join('|')) sh.getRange(1, 7, 1, 5).setValues([heads]);
   return sh;
 }
 
@@ -86,7 +86,7 @@ function doGet(e) {
   const cls = cls_(e && e.parameter && e.parameter.class);
   const rows = sheet_().getDataRange().getValues().slice(1);
   const items = rows
-    .map((r, i) => ({ row: i + 2, time: r[0], mission: r[1], name: r[2], idea: r[3], photo: r[4], shown: r[5] === true, cls: cls_(r[8]), likes: Number(r[9]) || 0 }))
+    .map((r, i) => ({ row: i + 2, time: r[0], mission: r[1], name: r[2], idea: r[3], photo: r[4], shown: r[5] === true, cls: cls_(r[8]), likes: Number(r[9]) || 0, best: r[10] === true }))
     .filter((x) => x.time && x.shown && x.cls === cls && (!mission || x.mission === mission))
     .reverse()
     .slice(0, 200)
@@ -99,6 +99,7 @@ function doGet(e) {
       time: Utilities.formatDate(new Date(x.time), 'Asia/Seoul', 'M월 d일'),
       date: Utilities.formatDate(new Date(x.time), 'Asia/Seoul', 'yyyy-MM-dd'),
       likes: x.likes,
+      best: x.best,
     }));
   return json_({ ok: true, items: items, approval: APPROVAL_REQUIRED });
 }
@@ -186,6 +187,7 @@ function doPost(e) {
     sh.getRange(row, 1, 1, 6).setValues([[new Date(), mission, name, idea, photoId, !APPROVAL_REQUIRED]]);
     sh.getRange(row, 9, 1, 2).setValues([[cls_(d.class), 0]]);
     sh.getRange(row, 6).insertCheckboxes();
+    sh.getRange(row, 11).insertCheckboxes();   // 베스트: 선생님이 체크하면 학생 갤러리에 보임
     if (photoId) {
       sh.getRange(row, 7).setFormula('=IMAGE("https://lh3.googleusercontent.com/d/' + photoId + '=w400")');
       sh.setRowHeight(row, 120);

@@ -510,7 +510,7 @@
                     const prev = readPhoto();
                     const out = await post({ action: 'photo', mission: missions[activeMissionId].artistTitle, name, image: photoData, id: prev && prev.name === name ? prev.id : '' });
                     try { localStorage.setItem(photoKey(), JSON.stringify({ id: out.id, name })); localStorage.setItem('artistName', name); } catch {}
-                    say(shareStatus, out.replaced ? '사진을 바꿨어요! 아래 갤러리에서 확인해 보세요.' : '올렸어요! 아래 갤러리에서 볼 수 있어요. 작품 이야기는 수업 마무리 때 써요.', 'ok');
+                    say(shareStatus, out.replaced ? '사진을 바꿨어요!' : '올렸어요! 작품 이야기는 수업 마무리 때 써요. (갤러리에는 선생님이 고른 베스트 작품이 보여요)', 'ok');
                     shareButton.disabled = false; shareButton.textContent = '사진 바꾸기';
                     loadGallery(missions[activeMissionId].artistTitle);
                 } catch (err) {
@@ -674,9 +674,16 @@
                     if (galleryMission) qs.set('mission', galleryMission);
                     const res = await fetch(GALLERY_URL + (qs.toString() ? '?' + qs : ''));
                     const out = await res.json();
-                    const items = out.items || [];
+                    // 학생 갤러리는 미술가별 베스트 5개만: 선생님이 '베스트'에 체크한 작품 먼저, 없으면 최근 작품
+                    const all = out.items || [];
+                    const groups = galleryMission ? [galleryMission] : order.map((i) => missions[i].artistTitle);
+                    const items = groups.flatMap((g) => {
+                        const mine = all.filter((x) => x.mission === g);
+                        const best = mine.filter((x) => x.best);
+                        return (best.length ? best : mine).slice(0, 5);
+                    });
                     lastItems = items;
-                    galleryNote.textContent = items.length ? `작품 ${items.length}개` : '아직 올라온 작품이 없어요. 첫 작품을 올려 보세요!';
+                    galleryNote.textContent = items.length ? (galleryMission ? `${galleryMission} 베스트 작품` : '미술가별 베스트 작품') : '아직 올라온 작품이 없어요. 첫 작품을 올려 보세요!';
                     galleryShown = PAGE; paintGallery();
                 } catch {
                     galleryNote.textContent = '갤러리를 불러오지 못했어요. 새로고침을 눌러 주세요.';
