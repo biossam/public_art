@@ -533,7 +533,8 @@
             galleryTabs.innerHTML = ['전체', ...order.map((i) => missions[i].artistTitle)].map((t) =>
                 `<button type="button" data-g="${t === '전체' ? '' : esc(t)}" class="g-tab px-3 py-1 rounded-full text-sm font-bold border-2 border-purple-300 text-purple-700">${esc(t)}</button>`).join('');
             galleryTabs.addEventListener('click', (e) => {
-                const b = e.target.closest('.g-tab'); if (b) loadGallery(b.dataset.g);
+                const b = e.target.closest('.g-tab'); if (!b) return;
+                loadGallery(b.dataset.g).then(() => { if (!document.getElementById('exhibitBuilder').classList.contains('hidden')) paintPick(); });
             });
             document.getElementById('galleryRefresh').addEventListener('click', () => loadGallery(galleryMission));
 
@@ -566,7 +567,10 @@
                 const m = String(x.time || '').match(/(\d+)월\s*(\d+)일/);
                 return m ? `${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}` : '';
             };
-            const shown = () => exDate.value ? exhibitItems.filter((x) => (x.date ? x.date === exDate.value : dayOf(x) === exDate.value.slice(5))) : exhibitItems;
+            // 갤러리에서 고른 미술가 탭과 달력 날짜로 함께 거름
+            const shown = () => exhibitItems
+                .filter((x) => !galleryMission || x.mission === galleryMission)
+                .filter((x) => !exDate.value || (x.date ? x.date === exDate.value : dayOf(x) === exDate.value.slice(5)));
             exDate.addEventListener('change', () => paintPick());
             document.getElementById('exhibitDateAll').addEventListener('click', () => { exDate.value = ''; paintPick(); });
             const paintPick = () => {
