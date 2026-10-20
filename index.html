@@ -100,6 +100,23 @@
                 </div>
             </section>
 
+            <!-- 작품 사진 올리기 (교실 속 미술 이야기 단계: 주소에 ?step=photo) -->
+            <section id="uploadSection" class="hidden mb-8 bg-white rounded-2xl p-6 border-2 border-purple-300 text-left">
+                <h2 class="text-2xl font-bold text-purple-700 mb-2 text-center">내 작품 사진 올리기</h2>
+                <p class="text-gray-600 text-sm mb-4 text-center">만든 작품을 찍어 올려요. <b>얼굴은 나오지 않게 작품만</b> 찍어 주세요. 작품 이야기는 수업 마무리 때 써요.</p>
+                <input id="photoName" type="text" maxlength="30" placeholder="예술가 이름 (수업 마무리 때도 같은 이름으로 써요)" class="w-full p-4 mb-4 rounded-xl border-2 border-purple-300 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+                <label class="block">
+                    <span class="font-semibold text-gray-700">작품 사진</span>
+                    <input id="photoInput" type="file" accept="image/*" class="mt-2 block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-purple-100 file:text-purple-700 file:font-bold">
+                </label>
+                <img id="photoPreview" alt="올릴 작품 사진 미리보기" class="hidden mt-3 max-h-64 mx-auto rounded-xl shadow">
+                <div class="flex justify-center mt-4">
+                    <button id="shareButton" class="px-6 py-3 bg-purple-600 text-white font-bold rounded-full shadow-md hover:bg-purple-700 transition duration-300 disabled:opacity-50">작품 사진 올리기</button>
+                </div>
+                <p id="shareStatus" class="mt-3 text-center text-sm font-semibold" aria-live="polite"></p>
+            </section>
+
+            <div id="ideaSection">
             <section class="mb-8">
                 <h2 class="text-2xl font-bold text-gray-800 mb-4">
                     예술가 이름과 작품 아이디어
@@ -134,6 +151,8 @@
                     미션 완료하기!
                 </button>
             </div>
+            <p id="ideaStatus" class="mt-3 text-center text-sm font-semibold" aria-live="polite"></p>
+            </div>
         </div>
 
         <!-- 개별 미션 완료 시 나타나는 결과 섹션 -->
@@ -150,20 +169,6 @@
                 </div>
             </div>
 
-            <!-- 친구들과 작품 나누기: 작품 사진과 아이디어를 갤러리에 올림 -->
-            <div id="shareBox" class="mt-6 bg-white rounded-2xl p-6 border-2 border-purple-300 text-left">
-                <h3 class="text-2xl font-bold text-purple-700 mb-2 text-center">친구들과 작품 나누기</h3>
-                <p class="text-gray-600 text-sm mb-4 text-center">내 작품 사진을 올리면 친구들도 갤러리에서 볼 수 있어요. <b>얼굴은 나오지 않게 작품만</b> 찍어 주세요.</p>
-                <label class="block">
-                    <span class="font-semibold text-gray-700">작품 사진 (선택)</span>
-                    <input id="photoInput" type="file" accept="image/*" class="mt-2 block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-purple-100 file:text-purple-700 file:font-bold">
-                </label>
-                <img id="photoPreview" alt="올릴 작품 사진 미리보기" class="hidden mt-3 max-h-64 mx-auto rounded-xl shadow">
-                <div class="flex justify-center mt-4">
-                    <button id="shareButton" class="px-6 py-3 bg-purple-600 text-white font-bold rounded-full shadow-md hover:bg-purple-700 transition duration-300 disabled:opacity-50">갤러리에 올리기</button>
-                </div>
-                <p id="shareStatus" class="mt-3 text-center text-sm font-semibold" aria-live="polite"></p>
-            </div>
         </section>
 
         <!-- 모든 미션 완료 시 나타나는 최종 퀘스트 완료 섹션 -->
@@ -206,6 +211,11 @@
                 <h3 class="text-2xl font-bold text-amber-800 mb-2 text-center">우리 반 전시회 만들기</h3>
                 <p class="text-sm text-gray-600 text-center mb-4">전시할 작품을 눌러 고르고 <b>전시 시작</b>을 누르세요. 화면을 크게 띄워 함께 감상할 수 있어요.</p>
                 <input id="exhibitTitle" maxlength="40" placeholder="전시회 이름 (예: 6학년 3반 공공미술 전시회)" class="w-full p-3 mb-3 rounded-xl border-2 border-amber-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                <div class="flex flex-wrap items-center gap-2 justify-center mb-3">
+                    <label for="exhibitDate" class="font-bold text-amber-800">올린 날짜</label>
+                    <input id="exhibitDate" type="date" class="p-2 rounded-xl border-2 border-amber-300 bg-white">
+                    <button id="exhibitDateAll" type="button" class="px-3 py-1 text-sm font-bold border-2 border-amber-300 rounded-full text-amber-800">모든 날짜</button>
+                </div>
                 <div class="flex flex-wrap gap-2 justify-center mb-3">
                     <button id="exhibitAll" type="button" class="px-3 py-1 text-sm font-bold border-2 border-amber-300 rounded-full text-amber-800">모두 고르기</button>
                     <button id="exhibitNone" type="button" class="px-3 py-1 text-sm font-bold border-2 border-amber-300 rounded-full text-amber-800">모두 빼기</button>
@@ -411,7 +421,7 @@
                         <p class="mt-4 text-center text-sm font-semibold">"예술은 우리 주변의 모든 것이 될 수 있답니다."</p>
                     `;
                     resultSection.classList.remove('hidden');
-                    shareButton.disabled = false; shareStatus.textContent = '';
+                    sendIdea(username, userIdea);
                     
                     // 모든 미션 완료 상태를 다시 확인하고 최종 증서를 표시합니다.
                     checkAllMissionsComplete();
@@ -462,41 +472,62 @@
                 } catch { shareStatus.textContent = '사진을 열 수 없어요. 다른 사진을 골라 주세요.'; }
             });
 
-            shareButton.addEventListener('click', async () => {
-                if (!GALLERY_URL) { shareStatus.textContent = '선생님이 갤러리를 준비하고 있어요.'; return; }
-                const name = nameInput.value.trim();
-                const idea = userIdeaInput.value.trim();
-                if (!name || !idea) { shareStatus.textContent = '예술가 이름과 작품 아이디어를 먼저 써 주세요.'; return; }
-                shareButton.disabled = true;
-                shareStatus.className = 'mt-3 text-center text-sm font-semibold text-purple-700';
-                shareStatus.textContent = '올리는 중이에요…';
+            const ep = () => order.indexOf(activeMissionId) + 1;   // 1편~4편
+            const photoKey = () => 'artistPhoto_' + ep();
+            const readPhoto = () => { try { return JSON.parse(localStorage.getItem(photoKey()) || 'null'); } catch { return null; } };
+            const post = async (body) => {
+                const res = await fetch(GALLERY_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+                const out = await res.json();
+                if (!out.ok) throw new Error(out.error || '');
+                return out;
+            };
+            // 사진과 작품 이야기를 모두 보내면 수업 사이트(같은 주소)의 '내 배지'에 이 편 이수를 기록
+            const markBadge = () => {
                 try {
-                    const res = await fetch(GALLERY_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ mission: missions[activeMissionId].artistTitle, name, idea, image: photoData }),
-                    });
-                    const out = await res.json();
-                    if (!out.ok) throw new Error(out.error || '');
-                    // 수업 사이트(같은 주소 biossam.github.io)의 '내 배지'에 이 편 이수를 기록
-                    try {
-                        const ep = order.indexOf(activeMissionId) + 1;   // 1편~4편
-                        const KEY = 'hsa-badges-v1';
-                        const map = JSON.parse(localStorage.getItem(KEY) || '{}') || {};
-                        const k = 'artist/publicart/' + ep;
-                        if (ep > 0 && photoData && !map[k]) { map[k] = new Date().toISOString().slice(0, 10); localStorage.setItem(KEY, JSON.stringify(map)); }
-                    } catch {}
-                    shareStatus.className = 'mt-3 text-center text-sm font-semibold text-green-700';
-                    shareStatus.textContent = out.approval
-                        ? '올렸어요! 선생님이 확인하면 갤러리에 보여요.'
-                        : '올렸어요! 아래 갤러리에서 볼 수 있어요.';
+                    const KEY = 'hsa-badges-v1';
+                    const map = JSON.parse(localStorage.getItem(KEY) || '{}') || {};
+                    const k = 'artist/publicart/' + ep();
+                    if (ep() > 0 && !map[k]) { map[k] = new Date().toISOString().slice(0, 10); localStorage.setItem(KEY, JSON.stringify(map)); }
+                } catch {}
+            };
+            const say = (el, text, tone) => {
+                el.className = 'mt-3 text-center text-sm font-semibold ' + ({ ok: 'text-green-700', bad: 'text-red-600' }[tone] || 'text-purple-700');
+                el.textContent = text;
+            };
+
+            // 1단계 (교실 속 미술 이야기): 이름 + 사진만 올림
+            shareButton.addEventListener('click', async () => {
+                if (!GALLERY_URL) { say(shareStatus, '선생님이 갤러리를 준비하고 있어요.'); return; }
+                const name = document.getElementById('photoName').value.trim();
+                if (!name) { say(shareStatus, '예술가 이름을 먼저 써 주세요.', 'bad'); return; }
+                if (!photoData) { say(shareStatus, '작품 사진을 골라 주세요.', 'bad'); return; }
+                shareButton.disabled = true; say(shareStatus, '올리는 중이에요…');
+                try {
+                    const out = await post({ action: 'photo', mission: missions[activeMissionId].artistTitle, name, image: photoData });
+                    try { localStorage.setItem(photoKey(), JSON.stringify({ id: out.id, name })); localStorage.setItem('artistName', name); } catch {}
+                    say(shareStatus, '올렸어요! 아래 갤러리에서 볼 수 있어요. 작품 이야기는 수업 마무리 때 써요.', 'ok');
                     loadGallery(missions[activeMissionId].artistTitle);
                 } catch (err) {
-                    shareStatus.className = 'mt-3 text-center text-sm font-semibold text-red-600';
-                    shareStatus.textContent = err.message || '올리지 못했어요. 잠시 뒤 다시 해 주세요.';
+                    say(shareStatus, err.message || '올리지 못했어요. 잠시 뒤 다시 해 주세요.', 'bad');
                     shareButton.disabled = false;
                 }
             });
+
+            // 2단계 (수업 마무리): 미션 완료하면 작품 이야기를 앞에서 올린 사진 줄에 채움
+            async function sendIdea(name, idea) {
+                const status = document.getElementById('ideaStatus');
+                if (!GALLERY_URL) return;
+                say(status, '작품 이야기를 보내는 중이에요…');
+                try {
+                    const prev = readPhoto();
+                    const out = await post({ mission: missions[activeMissionId].artistTitle, name, idea, id: prev && prev.name === name ? prev.id : '' });
+                    if (out.photo) { markBadge(); say(status, '작품 이야기까지 보냈어요! 내 배지에 이 편 배지가 생겼어요.', 'ok'); }
+                    else say(status, '작품 이야기를 보냈어요. 교실 속 미술 이야기에서 같은 이름으로 작품 사진도 올리면 배지를 받아요.', 'ok');
+                    loadGallery(missions[activeMissionId].artistTitle);
+                } catch (err) {
+                    say(status, err.message || '보내지 못했어요. 미션 완료하기를 다시 눌러 주세요.', 'bad');
+                }
+            }
 
             const order = [1, 0, 2, 3]; // 1편~4편 순서
             galleryTabs.innerHTML = ['전체', ...order.map((i) => missions[i].artistTitle)].map((t) =>
@@ -519,15 +550,26 @@
             try { exTitle.value = localStorage.getItem('exhibitTitle') || ''; } catch {}
             exTitle.addEventListener('input', () => { try { localStorage.setItem('exhibitTitle', exTitle.value); } catch {} });
             const exPick = document.getElementById('exhibitPick');
-            const exCount = () => { document.getElementById('exhibitCount').textContent = `고른 작품 ${exhibitItems.filter((x) => picked.has(x.id)).length}점`; };
+            const exCount = () => { document.getElementById('exhibitCount').textContent = `고른 작품 ${shown().filter((x) => picked.has(x.id)).length}점`; };
+            // 날짜로 거르기: 항목의 date(yyyy-MM-dd)가 없으면 'M월 d일'에서 월·일만 비교
+            const exDate = document.getElementById('exhibitDate');
+            const dayOf = (x) => {
+                if (x.date) return x.date.slice(5);
+                const m = String(x.time || '').match(/(\d+)월\s*(\d+)일/);
+                return m ? `${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}` : '';
+            };
+            const shown = () => exDate.value ? exhibitItems.filter((x) => (x.date ? x.date === exDate.value : dayOf(x) === exDate.value.slice(5))) : exhibitItems;
+            exDate.addEventListener('change', () => paintPick());
+            document.getElementById('exhibitDateAll').addEventListener('click', () => { exDate.value = ''; paintPick(); });
             const paintPick = () => {
-                exPick.innerHTML = exhibitItems.length ? exhibitItems.map((x) => {
+                const list = shown();
+                exPick.innerHTML = list.length ? list.map((x) => {
                     const on = picked.has(x.id);
                     return `<button type="button" data-pick="${Number(x.id)}" aria-pressed="${on}" class="text-left rounded-xl p-2 border-4 ${on ? 'border-amber-500 bg-white' : 'border-transparent bg-white/60 opacity-70'}">
                         ${x.image ? `<img src="${esc(x.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" class="w-full h-24 object-contain bg-purple-50 rounded-lg">` : `<div class="w-full h-24 flex items-center justify-center text-xs text-gray-500 bg-purple-50 rounded-lg">사진 없음</div>`}
                         <p class="mt-1 text-xs font-bold text-gray-800 truncate">${on ? '✔ ' : ''}${esc(x.name)}</p>
                         <p class="text-[11px] text-purple-500 truncate">${esc(x.mission)}</p></button>`;
-                }).join('') : '<p class="col-span-full text-center text-gray-500">아직 올라온 작품이 없어요.</p>';
+                }).join('') : `<p class="col-span-full text-center text-gray-500">${exDate.value ? '이 날짜에 올라온 작품이 없어요.' : '아직 올라온 작품이 없어요.'}</p>`;
                 exCount();
             };
             exPick.addEventListener('click', (e) => {
@@ -536,8 +578,8 @@
                 picked.has(id) ? picked.delete(id) : picked.add(id);
                 savePicked(); paintPick();
             });
-            document.getElementById('exhibitAll').addEventListener('click', () => { exhibitItems.forEach((x) => picked.add(x.id)); savePicked(); paintPick(); });
-            document.getElementById('exhibitNone').addEventListener('click', () => { exhibitItems.forEach((x) => picked.delete(x.id)); savePicked(); paintPick(); });
+            document.getElementById('exhibitAll').addEventListener('click', () => { shown().forEach((x) => picked.add(x.id)); savePicked(); paintPick(); });
+            document.getElementById('exhibitNone').addEventListener('click', () => { shown().forEach((x) => picked.delete(x.id)); savePicked(); paintPick(); });
             document.getElementById('exhibitOpen').addEventListener('click', async () => {
                 const box = document.getElementById('exhibitBuilder');
                 box.classList.toggle('hidden');
@@ -582,7 +624,7 @@
                 else if (e.key === 'Escape') closeShow();
             };
             document.getElementById('exhibitStart').addEventListener('click', () => {
-                show = exhibitItems.filter((x) => picked.has(x.id));
+                show = shown().filter((x) => picked.has(x.id));
                 if (!show.length) { alert('전시할 작품을 먼저 골라 주세요.'); return; }
                 document.getElementById('exhibitHead').textContent = exTitle.value.trim() || '우리 반 전시회';
                 at = 0; stage.classList.remove('hidden'); paintShow(); setPlay(true);
@@ -626,6 +668,14 @@
             // 주소로 미션 고르기: ?m=1~4 (1편~4편), #gallery 면 갤러리로 이동
             const qm = Number(new URLSearchParams(location.search).get('m'));
             if (qm >= 1 && qm <= 4) { activeMissionId = order[qm - 1]; updateMissionUI(activeMissionId); }
+            const photoStep = new URLSearchParams(location.search).get('step') === 'photo';
+            document.getElementById('uploadSection').classList.toggle('hidden', !photoStep);
+            document.getElementById('ideaSection').classList.toggle('hidden', photoStep);
+            try {
+                const nm = localStorage.getItem('artistName') || '';
+                document.getElementById('photoName').value = nm;
+                if (!nameInput.value) nameInput.value = (readPhoto() || {}).name || nm;
+            } catch {}
             loadGallery(qm >= 1 && qm <= 4 ? missions[activeMissionId].artistTitle : '');
             if (location.hash === '#gallery') setTimeout(() => document.getElementById('gallery').scrollIntoView(), 300);
 

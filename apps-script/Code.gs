@@ -80,6 +80,7 @@ function doGet(e) {
       idea: x.idea,
       image: x.photo ? 'https://drive.google.com/thumbnail?id=' + x.photo + '&sz=w800' : '',
       time: Utilities.formatDate(new Date(x.time), 'Asia/Seoul', 'M월 d일'),
+      date: Utilities.formatDate(new Date(x.time), 'Asia/Seoul', 'yyyy-MM-dd'),
       likes: x.likes,
     }));
   return json_({ ok: true, items: items, approval: APPROVAL_REQUIRED });
@@ -115,8 +116,29 @@ function doPost(e) {
     const mission = String(d.mission || '');
     const name = String(d.name || '').trim().slice(0, 30);
     const idea = String(d.idea || '').trim().slice(0, MAX_TEXT);
-    if (MISSIONS.indexOf(mission) < 0 || !name || !idea) return json_({ ok: false, error: '빈 칸이 있어요.' });
+    const photoOnly = d.action === 'photo';   // 교실 속 미술 이야기: 사진만 먼저 올림
+    if (MISSIONS.indexOf(mission) < 0 || !name || (!photoOnly && !idea) || (photoOnly && !d.image)) return json_({ ok: false, error: '빈 칸이 있어요.' });
     if (hasBadWord_(name) || hasBadWord_(idea)) return json_({ ok: false, error: '고운 말로 다시 써 주세요.' });
+    const sh = sheet_();
+
+    // 수업 마무리: 앞에서 올린 사진 줄(같은 미션·이름, 아이디어 빈칸)에 작품 이야기를 채움
+    if (!photoOnly && !d.image) {
+      const last = sh.getLastRow();
+      const rows = last >= 2 ? sh.getRange(2, 1, last - 1, 4).getValues() : [];
+      let target = 0;
+      const want = Number(d.id);
+      if (want >= 2 && want <= last) {
+        const r = rows[want - 2];
+        if (r[1] === mission && String(r[2]) === name && !r[3]) target = want;
+      }
+      for (let i = rows.length - 1; !target && i >= 0; i--) {
+        if (rows[i][0] && rows[i][1] === mission && String(rows[i][2]) === name && !rows[i][3]) target = i + 2;
+      }
+      if (target) {
+        sh.getRange(target, 4).setValue(idea);
+        return json_({ ok: true, id: target, photo: true, approval: APPROVAL_REQUIRED });
+      }
+    }
 
     let photoId = '';
     if (d.image) {
@@ -129,7 +151,6 @@ function doPost(e) {
       photoId = file.getId();
     }
     // A열(올린 시각)이 빈 첫 줄에 씀 (공개 칸 체크박스만 있는 줄은 빈 줄로 봄)
-    const sh = sheet_();
     const times = sh.getRange('A:A').getValues();
     let row = times.length + 1;
     for (let i = 1; i < times.length; i++) { if (times[i][0] === '') { row = i + 1; break; } }
@@ -141,7 +162,7 @@ function doPost(e) {
       sh.setRowHeight(row, 120);
     }
     if (!APPROVAL_REQUIRED) sh.getRange(row, 6).setValue(true);
-    return json_({ ok: true, approval: APPROVAL_REQUIRED });
+    return json_({ ok: true, id: row, photo: Boolean(photoId), approval: APPROVAL_REQUIRED });
   } catch (err) {
     return json_({ ok: false, error: '저장하지 못했어요. 잠시 뒤 다시 해 주세요.' });
   } finally {
