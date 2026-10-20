@@ -51,9 +51,26 @@ function sheet_() {
   return sh;
 }
 
-function folder_() {
+function folder_(mission) {
   const it = DriveApp.getFoldersByName(FOLDER_NAME);
-  return it.hasNext() ? it.next() : DriveApp.createFolder(FOLDER_NAME);
+  const root = it.hasNext() ? it.next() : DriveApp.createFolder(FOLDER_NAME);
+  if (!mission) return root;
+  // 미술가별 하위 폴더 (예: '예술가 퀘스트 작품 사진/1편 공공미술가')
+  const NO = { '공공미술가': 1, '동시대 공공미술가': 2, '사회참여 공공미술가': 3, '재사용 공공미술가': 4 };
+  const name = (NO[mission] ? NO[mission] + '편 ' : '') + mission;
+  const sub = root.getFoldersByName(name);
+  return sub.hasNext() ? sub.next() : root.createFolder(name);
+}
+
+// (선택) 이미 올라온 사진을 미술가별 폴더로 옮김: 편집기에서 이 함수를 골라 ▶ 실행
+function 사진을_미술가별_폴더로_정리() {
+  const rows = sheet_().getDataRange().getValues().slice(1);
+  let moved = 0;
+  rows.forEach((r) => {
+    if (!r[4] || MISSIONS.indexOf(r[1]) < 0) return;
+    try { DriveApp.getFileById(r[4]).moveTo(folder_(r[1])); moved++; } catch (e) { /* 지워진 사진은 건너뜀 */ }
+  });
+  Logger.log(moved + '장을 옮겼어요.');
 }
 
 function json_(obj) {
@@ -146,7 +163,7 @@ function doPost(e) {
       if (!m) return json_({ ok: false, error: '사진 형식이 올바르지 않아요.' });
       const bytes = Utilities.base64Decode(m[2]);
       if (bytes.length > MAX_IMAGE_BYTES) return json_({ ok: false, error: '사진이 너무 커요.' });
-      const file = folder_().createFile(Utilities.newBlob(bytes, m[1], mission + '_' + name + '.jpg'));
+      const file = folder_(mission).createFile(Utilities.newBlob(bytes, m[1], mission + '_' + name + '.jpg'));
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
       photoId = file.getId();
     }
