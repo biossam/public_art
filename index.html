@@ -222,11 +222,6 @@
                     <span id="exhibitCount" class="px-3 py-1 text-sm font-bold text-amber-800"></span>
                 </div>
                 <div id="exhibitPick" class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-96 overflow-y-auto p-1"></div>
-                <div class="mt-4 bg-white/70 rounded-xl p-3 text-center">
-                    <p class="text-sm text-gray-700">⭐를 누르면 <b>학생 갤러리 베스트</b>로 정해져요 (미술가별 5개까지).</p>
-                    <button id="bestSave" type="button" class="mt-2 px-5 py-2 text-sm font-bold text-white bg-yellow-500 rounded-full hover:bg-yellow-600">⭐ 베스트 저장하기</button>
-                    <p id="bestStatus" class="mt-1 text-sm font-semibold text-amber-800" aria-live="polite"></p>
-                </div>
                 <div class="flex justify-center mt-4">
                     <button id="exhibitStart" type="button" class="px-8 py-3 bg-amber-600 text-white font-extrabold rounded-full shadow-md hover:bg-amber-700 disabled:opacity-50">전시 시작</button>
                 </div>
@@ -593,29 +588,14 @@
                 const list = shown();
                 exPick.innerHTML = list.length ? list.map((x) => {
                     const on = picked.has(x.id);
-                    const star = bestSet.has(x.id);
-                    return `<div class="relative"><button type="button" data-best="${Number(x.id)}" aria-pressed="${star}" title="학생 갤러리 베스트로 정하기" class="absolute top-1 right-1 z-10 w-8 h-8 rounded-full text-lg leading-8 shadow ${star ? 'bg-yellow-300' : 'bg-white/90 grayscale opacity-70'}">⭐</button><button type="button" data-pick="${Number(x.id)}" aria-pressed="${on}" class="w-full text-left rounded-xl p-2 border-4 ${on ? 'border-amber-500 bg-white' : 'border-transparent bg-white/60 opacity-70'}">
+                    return `<div class="relative"><span class="absolute top-1 right-1 z-10 px-2 rounded-full bg-white/90 text-xs font-bold text-pink-600 shadow">♥ ${Number(x.likes) || 0}</span><button type="button" data-pick="${Number(x.id)}" aria-pressed="${on}" class="w-full text-left rounded-xl p-2 border-4 ${on ? 'border-amber-500 bg-white' : 'border-transparent bg-white/60 opacity-70'}">
                         ${x.image ? `<img src="${esc(thumb(x.image, 240))}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" class="w-full h-24 object-contain bg-purple-50 rounded-lg">` : `<div class="w-full h-24 flex items-center justify-center text-xs text-gray-500 bg-purple-50 rounded-lg">사진 없음</div>`}
                         <p class="mt-1 text-xs font-bold text-gray-800 truncate">${on ? '✔ ' : ''}${esc(x.name)}</p>
                         <p class="text-[11px] text-purple-500 truncate">${esc(x.mission)}</p></button></div>`;
                 }).join('') : `<p class="col-span-full text-center text-gray-500">${exDate.value ? '이 날짜에 올라온 작품이 없어요.' : '아직 올라온 작품이 없어요.'}</p>`;
                 exCount();
             };
-            // 베스트: 선생님이 고른 작품이 학생 갤러리에 보임 (미술가별 5개까지)
-            let bestSet = new Set();
             exPick.addEventListener('click', (e) => {
-                const st = e.target.closest('[data-best]');
-                if (st) {
-                    const id = Number(st.dataset.best);
-                    if (bestSet.has(id)) bestSet.delete(id);
-                    else {
-                        const m = (exhibitItems.find((x) => x.id === id) || {}).mission;
-                        if (exhibitItems.filter((x) => x.mission === m && bestSet.has(x.id)).length >= 5) { alert(`'${m}' 베스트는 5개까지 고를 수 있어요.`); return; }
-                        bestSet.add(id);
-                    }
-                    document.getElementById('bestStatus').textContent = '바꾼 내용을 저장하려면 ⭐ 베스트 저장하기를 누르세요.';
-                    paintPick(); return;
-                }
                 const b = e.target.closest('[data-pick]'); if (!b) return;
                 const id = Number(b.dataset.pick);
                 picked.has(id) ? picked.delete(id) : picked.add(id);
@@ -631,28 +611,9 @@
                 try {
                     const res = await fetch(GALLERY_URL);
                     exhibitItems = ((await res.json()).items || []).map((x) => ({ ...x, id: Number(x.id) }));
-                    bestSet = new Set(exhibitItems.filter((x) => x.best).map((x) => x.id));
                 } catch { exhibitItems = lastItems; }
                 paintPick();
                 box.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            });
-
-            document.getElementById('bestSave').addEventListener('click', async () => {
-                const st = document.getElementById('bestStatus');
-                st.textContent = '저장하는 중…';
-                try {
-                    let key = ''; try { key = localStorage.getItem('teacherKey') || ''; } catch {}
-                    let res = await fetch(GALLERY_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'best', ids: [...bestSet], key }) });
-                    let out = await res.json();
-                    if (out.needKey) {
-                        key = prompt('선생님 코드를 입력하세요 (Apps Script의 TEACHER_KEY)') || '';
-                        try { localStorage.setItem('teacherKey', key); } catch {}
-                        res = await fetch(GALLERY_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'best', ids: [...bestSet], key }) });
-                        out = await res.json();
-                    }
-                    if (!out.ok) throw new Error(out.error || '');
-                    st.textContent = `저장했어요! 학생 갤러리에 베스트 ${bestSet.size}개가 보여요.`;
-                } catch (err) { st.textContent = err.message || '저장하지 못했어요. 다시 눌러 주세요.'; }
             });
 
             const stage = document.getElementById('exhibitStage');
@@ -698,6 +659,16 @@
             document.getElementById('exhibitNext').addEventListener('click', () => { go(1); setPlay(playing); });
             document.getElementById('exhibitPlay').addEventListener('click', () => setPlay(!playing));
 
+            /* 학생 갤러리: 미술가별 투표 1~5등(베스트)만 보여 주고, '투표하기'를 누르면 그 미술가 작품 전체에 투표
+               한 기기에서 미술가마다 3표까지, 작품마다 한 번, 내 작품에는 투표 못 함 */
+            const VOTE_MAX = 3;
+            let voteMode = false, allItems = [];
+            let voted = new Set();
+            try { voted = new Set(JSON.parse(localStorage.getItem('galleryVoted') || '[]')); } catch {}
+            const saveVoted = () => { try { localStorage.setItem('galleryVoted', JSON.stringify([...voted])); } catch {} };
+            const myIds = () => [1, 2, 3, 4].map((n) => { try { return (JSON.parse(localStorage.getItem('artistPhoto_' + n) || 'null') || {}).id; } catch { return 0; } }).filter(Boolean).map(Number);
+            const rank = (list) => [...list].sort((a, b) => (Number(b.likes) || 0) - (Number(a.likes) || 0) || Number(b.id) - Number(a.id));
+
             async function loadGallery(mission) {
                 galleryMission = mission || '';
                 galleryTabs.querySelectorAll('.g-tab').forEach((b) => {
@@ -707,41 +678,66 @@
                 });
                 if (isTeacher) return;   // 선생님 화면은 탭만 바꾸고 목록은 전시회 만들기에서 봄
                 if (!GALLERY_URL) { galleryNote.textContent = '선생님이 갤러리를 준비하고 있어요.'; galleryGrid.innerHTML = ''; return; }
+                if (!galleryMission) voteMode = false;
                 galleryNote.textContent = '불러오는 중…';
                 try {
                     const qs = new URLSearchParams();
                     if (galleryMission) qs.set('mission', galleryMission);
                     const res = await fetch(GALLERY_URL + (qs.toString() ? '?' + qs : ''));
                     const out = await res.json();
-                    // 학생 갤러리는 미술가별 베스트 5개만: 선생님이 '베스트'에 체크한 작품 먼저, 없으면 최근 작품
-                    const all = out.items || [];
-                    const groups = galleryMission ? [galleryMission] : order.map((i) => missions[i].artistTitle);
-                    const items = groups.flatMap((g) => {
-                        const mine = all.filter((x) => x.mission === g);
-                        const best = mine.filter((x) => x.best);
-                        return (best.length ? best : mine).slice(0, 5);
-                    });
-                    lastItems = items;
-                    galleryNote.textContent = items.length ? (galleryMission ? `${galleryMission} 베스트 작품` : '미술가별 베스트 작품') : '아직 올라온 작품이 없어요. 첫 작품을 올려 보세요!';
+                    allItems = (out.items || []).map((x) => ({ ...x, id: Number(x.id), likes: Number(x.likes) || 0 }));
                     galleryShown = PAGE; paintGallery();
                 } catch {
                     galleryNote.textContent = '갤러리를 불러오지 못했어요. 새로고침을 눌러 주세요.';
                 }
             }
             function paintGallery() {
-                const items = lastItems;
-                {
-                    galleryGrid.innerHTML = items.slice(0, galleryShown).map((x) => `
-                        <article class="bg-white rounded-2xl shadow p-4 border-2 border-purple-100">
+                const groups = galleryMission ? [galleryMission] : order.map((i) => missions[i].artistTitle);
+                let items;
+                if (voteMode) items = allItems;
+                else items = groups.flatMap((g) => rank(allItems.filter((x) => x.mission === g)).slice(0, 5).map((x, k) => ({ ...x, place: k + 1 })));
+                lastItems = items;
+                const left = galleryMission ? VOTE_MAX - allItems.filter((x) => voted.has(x.id)).length : 0;
+                galleryNote.innerHTML = !allItems.length ? '아직 올라온 작품이 없어요. 첫 작품을 올려 보세요!'
+                    : voteMode ? `${esc(galleryMission)} 작품 ${allItems.length}개 · 마음에 드는 작품에 투표하세요 (남은 표 ${Math.max(0, left)}개)
+                        <button type="button" id="voteBack" class="ml-2 underline font-bold text-purple-700">베스트 보기</button>`
+                    : `${galleryMission ? esc(galleryMission) + ' ' : '미술가별 '}투표 베스트 5
+                        ${galleryMission ? `<button type="button" id="voteGo" class="ml-2 px-3 py-1 rounded-full bg-pink-500 text-white text-sm font-bold">♥ 투표하기</button>` : '<span class="block text-sm text-gray-500">미술가 탭을 고르면 투표할 수 있어요.</span>'}`;
+                document.getElementById('voteGo')?.addEventListener('click', () => { voteMode = true; galleryShown = PAGE; paintGallery(); });
+                document.getElementById('voteBack')?.addEventListener('click', () => { voteMode = false; paintGallery(); });
+                const mine = myIds();
+                galleryGrid.innerHTML = items.slice(0, galleryShown).map((x) => {
+                    const on = voted.has(x.id), own = mine.includes(x.id);
+                    return `
+                        <article class="bg-white rounded-2xl shadow p-4 border-2 ${x.place === 1 ? 'border-yellow-400' : 'border-purple-100'}">
+                            ${x.place ? `<p class="text-sm font-extrabold text-amber-600 mb-1">${x.place === 1 ? '🏆' : '🏅'} ${x.place}등</p>` : ''}
                             ${x.image ? `<img src="${esc(thumb(x.image, 480))}" alt="${esc(x.name)}의 작품" loading="lazy" decoding="async" referrerpolicy="no-referrer" class="w-full max-h-96 object-contain rounded-xl mb-3 bg-purple-50">` : ''}
                             <p class="text-xs font-bold text-purple-500">${esc(x.mission)} · ${esc(x.time)}</p>
                             <h3 class="text-lg font-extrabold text-gray-800">${esc(x.name)}</h3>
                             <p class="text-gray-700 mt-1 whitespace-pre-line">${esc(x.idea)}</p>
-                        </article>`).join('')
-                        + (items.length > galleryShown ? `<div class="col-span-full flex justify-center"><button type="button" id="galleryMore" class="px-5 py-2 font-bold text-purple-700 border-2 border-purple-300 rounded-full hover:bg-purple-100">더 보기 (${items.length - galleryShown}개 남음)</button></div>` : '');
-                    document.getElementById('galleryMore')?.addEventListener('click', () => { galleryShown += PAGE; paintGallery(); });
-                }
+                            <div class="mt-3 flex items-center gap-2">
+                                ${voteMode && !own ? `<button type="button" data-vote="${x.id}" aria-pressed="${on}" class="px-3 py-1 rounded-full border-2 text-sm font-bold ${on ? 'bg-pink-100 border-pink-400 text-pink-600' : 'border-purple-200 text-purple-600 hover:bg-purple-50'}">${on ? '♥ 투표했어요' : '♡ 투표'}</button>` : ''}
+                                ${voteMode && own ? '<span class="text-xs text-gray-500">내 작품</span>' : ''}
+                                <span class="text-sm font-bold text-pink-600">♥ ${x.likes}</span>
+                            </div>
+                        </article>`;
+                }).join('')
+                    + (items.length > galleryShown ? `<div class="col-span-full flex justify-center"><button type="button" id="galleryMore" class="px-5 py-2 font-bold text-purple-700 border-2 border-purple-300 rounded-full hover:bg-purple-100">더 보기 (${items.length - galleryShown}개 남음)</button></div>` : '');
+                document.getElementById('galleryMore')?.addEventListener('click', () => { galleryShown += PAGE; paintGallery(); });
             }
+            galleryGrid.addEventListener('click', async (e) => {
+                const b = e.target.closest('[data-vote]'); if (!b) return;
+                const id = Number(b.dataset.vote);
+                if (voted.has(id)) return;
+                if (allItems.filter((x) => voted.has(x.id)).length >= VOTE_MAX) { alert(`한 미술가에 ${VOTE_MAX}표까지 투표할 수 있어요.`); return; }
+                const x = allItems.find((y) => y.id === id); if (!x) return;
+                voted.add(id); saveVoted(); x.likes += 1; paintGallery();
+                try {
+                    const res = await fetch(GALLERY_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'like', id }) });
+                    const out = await res.json();
+                    if (out.ok && out.likes) { x.likes = Number(out.likes); paintGallery(); }
+                } catch { /* 숫자는 다음에 불러올 때 맞춰짐 */ }
+            });
 
             // 주소로 미션 고르기: ?m=1~4 (1편~4편), #gallery 면 갤러리로 이동
             const qm = Number(new URLSearchParams(location.search).get('m'));
